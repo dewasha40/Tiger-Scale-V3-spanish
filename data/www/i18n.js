@@ -29,7 +29,7 @@
         ru:      { name: 'Русский',              short: 'RU',    flag: '🇷🇺' },
         nl:      { name: 'Nederlands',           short: 'NL',    flag: '🇳🇱' }
     };
-    const DEFAULT_LANG  = 'en';
+    const DEFAULT_LANG  = 'es';
     const FALLBACK_LANG = 'en';
     const STORAGE_KEY   = 'tigertag_lang';   // kept identical to legacy key
     const LOCALES_BASE  = 'locales';
@@ -114,8 +114,7 @@
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored && LANGS[stored]) return stored;
         } catch (_) {}
-        const nav = (navigator.language || navigator.userLanguage || DEFAULT_LANG).slice(0, 2).toLowerCase();
-        return LANGS[nav] ? nav : DEFAULT_LANG;
+        return DEFAULT_LANG;
     }
 
     function buildSwitcher() {

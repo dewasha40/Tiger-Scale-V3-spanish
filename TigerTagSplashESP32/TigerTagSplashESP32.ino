@@ -249,7 +249,7 @@ static PairHttp* volatile gPairHttpReq = nullptr;
 
 #define DARK_BG 0x0000
 
-Language gLanguage = LANG_EN;
+Language gLanguage = LANG_ES;
 uint8_t  gVolume      = 50;   // 0–100
 uint8_t  gBrightness  = 100;  // 10–100, backlight PWM percent — floor lives in the UI
 bool     gMute        = false;
@@ -16134,7 +16134,7 @@ void setup() {
     // web-installer flash (its merged image wipes NVS; OTA and normal
     // reflashes keep it). That is the trigger for the first-boot flow.
     gFirstRunPending     = !prefs.isKey("language");
-    gLanguage            = (Language)prefs.getUChar("language", LANG_EN);
+    gLanguage            = (Language)prefs.getUChar("language", LANG_ES);
     gVolume              = prefs.getUChar("volume",     50);
     gBrightness          = prefs.getUChar("brightness", 100);
     gMute                = prefs.getBool ("mute",       false);

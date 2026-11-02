@@ -17,3 +17,9 @@ Reset this file to the header above at each checkpoint. Nothing is lost: the raw
 log lives in git history and the synthesised entry lives in the changelog.
 
 ---
+
+## Changed
+- `TigerTagSplashESP32/TigerTagSplashESP32.ino`, `data/www/i18n.js`, `data/www/index.html`: español predeterminado para instalaciones nuevas y selector de idioma conservado.
+- `README.md`, `docs/INSTALACION_ES.md`, `README.en.md`: documentación principal en español y copia del README original en inglés.
+- `simulador/tigerscale_v3.sim.json`: perfil de TigerScale V3 para añadirlo al ESP32 Simulador.
+- `README.md`, `docs/INSTALACION_ES.md`, `docs/img/interfaz-*-simulada.png`: foto del dispositivo y capturas de las tres páginas de la maqueta, identificadas como simulación.
