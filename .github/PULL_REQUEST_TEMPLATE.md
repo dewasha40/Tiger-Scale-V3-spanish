@@ -1,38 +1,38 @@
-## What does this change?
+## ¿Qué cambia esto?
 
-<!-- One or two sentences. Link the issue if there is one. -->
+<!-- Resume el cambio en una o dos frases. Enlaza la incidencia si existe. -->
 
-## Why?
+## ¿Por qué?
 
-<!-- What problem does it solve? -->
+<!-- ¿Qué problema resuelve? -->
 
-## How was it tested?
+## ¿Cómo se ha probado?
 
-Be specific about what you could and couldn't verify — this project talks to
-hardware that CI cannot reach, so "it compiles" is honest and useful, while
-implying a hardware behaviour was confirmed when only the build was is not.
+Indica con precisión qué has podido verificar y qué no. Este proyecto se comunica
+con hardware al que la integración continua no tiene acceso. Decir «compila» es
+honesto y útil; no afirmes haber confirmado el comportamiento en hardware si solo
+has compilado el firmware.
 
-- [ ] Compiles: `pio run -e esp32s3_hsu_b`
-- [ ] Compiles for every env (CI does this too)
-- [ ] Tested on real hardware — which wiring? ______
-- [ ] Not testable without hardware I don't have
+- [ ] Compila: `pio run -e esp32s3_hsu_b`
+- [ ] Compila para todos los entornos (también lo comprueba CI)
+- [ ] Probado en hardware real — ¿con qué cableado? ______
+- [ ] No se puede probar sin hardware del que no dispongo
 
-## Checklist
+## Lista de comprobación
 
-- [ ] `bash scripts/check-codemap.sh` passes (and I updated CODEMAP.md line
-      numbers if it reported drift)
-- [ ] `bash scripts/check-i18n.sh` passes (if I touched `i18n.h`)
-- [ ] `bash scripts/update_toc.sh` run (if I added or moved a `// §N — ` banner)
-- [ ] `WORKLOG.md` updated — **maintainers only**. Contributing from a fork?
-      Leave WORKLOG.md alone: it is the maintainers' since-last-commit log,
-      reset at every checkpoint, so a fork PR that writes into it will always
-      end up conflicting.
-- [ ] Comments I touched are still true of the code around them
-- [ ] Smallest diff that does the job — no unrelated reformatting
+- [ ] `bash scripts/check-codemap.sh` termina correctamente (y he actualizado
+      los números de línea de CODEMAP.md si indicó que estaban desfasados)
+- [ ] `bash scripts/check-i18n.sh` termina correctamente (si he modificado `i18n.h`)
+- [ ] He ejecutado `bash scripts/update_toc.sh` (si añadí o moví un encabezado `// §N — `)
+- [ ] He actualizado `WORKLOG.md` — **solo mantenedores**. Si colaboras desde un fork,
+      no modifiques WORKLOG.md: es el registro de cambios desde la última versión,
+      se reinicia en cada punto de control y los cambios de un fork siempre crearían conflictos.
+- [ ] Los comentarios que he tocado siguen describiendo correctamente el código
+- [ ] El diff es lo más pequeño posible y no incluye cambios de formato ajenos a la tarea
 
-## For a UI change
+## Si el cambio afecta a la interfaz
 
-- [ ] Visual only: no change to what data is shown, how it's computed, or
-      touch-zone coordinates
-- [ ] I checked the [LVGL v8 traps](../blob/main/docs/FIRMWARE.md#lvgl-v8-traps)
-- [ ] Screenshot or photo attached
+- [ ] Es solo visual: no cambia los datos mostrados, cómo se calculan ni las
+      coordenadas de las zonas táctiles
+- [ ] He consultado las [particularidades de LVGL v8](../blob/main/docs/FIRMWARE_ES.md#lvgl-v8-traps)
+- [ ] He adjuntado una captura de pantalla o una foto

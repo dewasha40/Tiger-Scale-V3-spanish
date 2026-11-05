@@ -1,52 +1,52 @@
-name: Feature request
-description: Suggest an improvement
+name: Proponer una mejora
+description: Sugiere una mejora
 labels: [enhancement]
 body:
   - type: markdown
     attributes:
       value: |
-        A few things have already been investigated and closed. Please check
-        [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#things-that-are-settled)
-        first — notably USB-connected NFC readers (physically impossible on this
-        board), Arduino IDE support, and motorised spool rotation.
+        Algunas propuestas ya se han estudiado y descartado. Antes, consulta
+        [CONTRIBUTING.md](../blob/main/CONTRIBUTING_ES.md#cosas-que-estan-decididas),
+        especialmente en lo relativo a lectores NFC por USB (imposibles físicamente
+        en esta placa), el IDE de Arduino y la rotación motorizada de bobinas.
 
   - type: textarea
     id: problem
     attributes:
-      label: What problem would this solve?
-      description: Describe the situation you're in, not the implementation you have in mind.
+      label: ¿Qué problema resolvería?
+      description: Describe la situación y no la solución técnica que tienes en mente.
     validations:
       required: true
 
   - type: textarea
     id: idea
     attributes:
-      label: What did you have in mind?
+      label: ¿Qué propones?
     validations:
       required: true
 
   - type: dropdown
     id: area
     attributes:
-      label: Which part of the project?
+      label: ¿Qué parte del proyecto?
       options:
-        - Touchscreen UI
-        - Weighing / calibration
-        - NFC reading
-        - Web UI
-        - Cloud sync
-        - OTA updates
-        - Hardware / enclosure
-        - Documentation
-        - Build tooling
-        - Other
+        - Interfaz de la pantalla táctil
+        - Pesaje / calibración
+        - Lectura NFC
+        - Interfaz web
+        - Sincronización con la nube
+        - Actualizaciones OTA
+        - Hardware / carcasa
+        - Documentación
+        - Herramientas de compilación
+        - Otro
     validations:
       required: true
 
   - type: checkboxes
     id: help
     attributes:
-      label: Would you like to work on it?
+      label: ¿Te gustaría colaborar?
       options:
-        - label: I'd be willing to open a pull request
-        - label: I have the hardware to test it
+        - label: Puedo preparar una solicitud de cambios
+        - label: Tengo el hardware para probarlo

@@ -1,50 +1,50 @@
-name: Bug report
-description: Something isn't working
+name: Informar de un error
+description: Algo no funciona
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Two fields below matter more than everything else combined: **the build
-        env** and **how your readers are wired**.
+        Hay dos datos que importan más que el resto: **el entorno de compilación**
+        y **cómo están cableados los lectores**.
 
-        Most "no readers detected" reports turn out to be firmware built for a
-        transport that doesn't match the wiring — which produces no error message
-        at all, so it's invisible without those two facts.
+        La mayoría de los casos en los que «no se detectan lectores» se deben a que
+        el firmware se compiló para un tipo de conexión distinto al cableado. Esto
+        no genera ningún mensaje de error, así que esos dos datos son imprescindibles.
 
   - type: dropdown
     id: env
     attributes:
-      label: Which build env did you flash?
+      label: ¿Qué entorno de compilación instalaste?
       options:
         - esp32s3_hsu_b (default — ESP32-S3-Touch-LCD-3.5B)
-        - esp32s3_hsu (ESP32-S3-Touch-LCD-3.5, no B)
-        - esp32s3 (SPI wiring)
-        - esp32s3_i2c (I2C wiring)
+        - esp32s3_hsu (ESP32-S3-Touch-LCD-3.5, sin B)
+        - esp32s3 (cableado SPI)
+        - esp32s3_i2c (cableado I2C)
         - esp32s3_hsu_debug
         - esp32s3_i2c_debug
-        - I don't know / I used a prebuilt release binary
+        - No lo sé / instalé un binario publicado
     validations:
       required: true
 
   - type: dropdown
     id: wiring
     attributes:
-      label: How are your PN532 readers physically wired?
+      label: ¿Cómo están conectados físicamente los lectores PN532?
       options:
         - HSU / UART (module mode switch OFF/OFF)
         - SPI (module mode switch OFF/ON)
         - I2C (module mode switch ON/OFF)
-        - No readers connected
-        - I'm not sure
+        - No hay lectores conectados
+        - No estoy seguro
     validations:
       required: true
 
   - type: input
     id: version
     attributes:
-      label: Firmware version
-      description: Shown on the boot splash and under Settings, or `TIGERSCALE_FW_VERSION` in §2.
+      label: Versión del firmware
+      description: Aparece en la pantalla de inicio y en Ajustes, o en `TIGERSCALE_FW_VERSION` del §2.
       placeholder: "2.2.0"
     validations:
       required: true
@@ -52,17 +52,17 @@ body:
   - type: textarea
     id: what
     attributes:
-      label: What happened?
-      description: What you expected, and what happened instead.
+      label: ¿Qué ha ocurrido?
+      description: ¿Qué esperabas que ocurriera y qué ha ocurrido en su lugar?
     validations:
       required: true
 
   - type: textarea
     id: repro
     attributes:
-      label: Steps to reproduce
+      label: Pasos para reproducirlo
       placeholder: |
-        1. Place a spool on the platform
+        1. Coloca una bobina en la plataforma
         2. ...
     validations:
       required: true
@@ -70,25 +70,25 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Serial log around the failure
+      label: Registro del puerto serie cuando ocurre el fallo
       description: |
-        `pio device monitor`, or `python3 scripts/watch_logs.py <device-ip>` if the
-        cable is unplugged. Backtraces are decoded automatically by the monitor.
+        Usa `pio device monitor`, o `python3 scripts/watch_logs.py <device-ip>` si
+        el cable está desconectado. El monitor decodifica automáticamente las trazas.
 
-        For a reader problem, a log from `esp32s3_hsu_debug` or `esp32s3_i2c_debug`
-        is far more useful — it prints every byte on the PN532 link.
+        Si el problema afecta a un lector, resulta mucho más útil un registro de
+        `esp32s3_hsu_debug` o `esp32s3_i2c_debug`: muestra cada byte del enlace PN532.
       render: shell
 
   - type: textarea
     id: hardware
     attributes:
-      label: Hardware notes
-      description: Board variant, load cell, anything non-standard about your build.
+      label: Datos del hardware
+      description: Variante de la placa, célula de carga y cualquier elemento no estándar.
 
   - type: checkboxes
     id: checked
     attributes:
-      label: Before submitting
+      label: Antes de enviar
       options:
-        - label: I read [docs/TROUBLESHOOTING.md](../blob/main/docs/TROUBLESHOOTING.md)
-        - label: My build env matches my wiring (or I've said above that it might not)
+        - label: He leído [docs/TROUBLESHOOTING_ES.md](../blob/main/docs/TROUBLESHOOTING_ES.md)
+        - label: El entorno de compilación coincide con el cableado (o he indicado que podría no coincidir)
