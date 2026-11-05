@@ -1,40 +1,27 @@
-# RFID read performance: what the two readers cost each other
+# Rendimiento de lectura RFID: interferencia entre los dos lectores
 
-Measured 2026-10-28 on a healthy bench unit (ESP32-S3-Touch-LCD-3.5B, two PN532
-over HSU, firmware 3.12.0 plus a measurement-only build), with a spool carrying
-one TigerTag NTAG on each flange. 64 cells, 1.2 s of continuous polling each.
+Mediciones realizadas el 2026-10-28 con una unidad de banco en buen estado (ESP32-S3-Touch-LCD-3.5B, dos PN532 por HSU, firmware 3.12.0 más una compilación solo para medición) y una bobina con una etiqueta TigerTag NTAG en cada ala. Se midieron 64 combinaciones, con sondeo continuo de 1,2 s por combinación.
 
-Every cell records attempts as well as successes, because the phases do not get
-the same number of attempts: the solo phases poll one reader instead of two, and
-the alternating phase pays four extra commands per iteration. Only **success per
-attempt** is comparable across phases.
+Cada combinación registra tanto los intentos como las lecturas correctas, porque las fases no realizan el mismo número de intentos: en las fases individuales se sondea un lector en vez de dos y la fase alterna ejecuta cuatro comandos adicionales por iteración. Solo se puede comparar entre fases la **proporción de lecturas correctas por intento**.
 
-> **Status.** Everything the "Recommended working method" section below asks for
-> is now in the firmware: the idle reader's carrier goes down while the other
-> reads, the poll timing is 100 ms / 2 retries, the compiled default is level 7,
-> and the auto-calibration measures in the alternating regime. The section is
-> left as written, because it records what the measurements argued for before
-> the code changed.
+> **Estado.** El firmware ya incluye todo lo recomendado en la sección «Método de trabajo recomendado»: se apaga el campo del lector inactivo mientras lee el otro, el sondeo se realiza cada 100 ms con 2 reintentos, el valor predeterminado compilado es 7 y la autocalibración mide en régimen alterno. Se conserva la redacción de esa sección porque documenta lo que las mediciones justificaron antes de cambiar el código.
 
-## Method
+## Método
 
-| Phase | What it measures |
-|-------|------------------|
-| `soloL` | Left reader swept 0–15 with the **right carrier switched off**. The interference-free reference for the left side. |
-| `soloR` | Right reader swept 0–15 with the **left carrier off**. Same, for the right side. |
-| `both` | Both readers at the same level, both carriers up. **This is what ships today.** |
-| `alt` | Both readers at the same level, but only one carrier up at a time — the other is switched off for the duration of its neighbour's read. |
+| Fase | Qué mide |
+|-------|----------|
+| `soloL` | Barrido del lector izquierdo de 0 a 15 con el **campo del lector derecho apagado**. Referencia sin interferencias para el lado izquierdo. |
+| `soloR` | Barrido del lector derecho de 0 a 15 con el **campo del lector izquierdo apagado**. Lo mismo para el lado derecho. |
+| `both` | Ambos lectores al mismo nivel, con los dos campos activos. **Este es el método que se distribuye actualmente.** |
+| `alt` | Ambos lectores al mismo nivel, pero solo un campo está activo a la vez: se apaga mientras lee el lector vecino. |
 
-Switching a carrier means `RFConfiguration` CfgItem 0x01, which turns the
-13.56 MHz field on or off without resetting the module. Note that the firmware's
-existing `antennaOn()` / `antennaOff()` do **not** do this — they only set a
-boolean — so in the shipped firmware both carriers are always up.
+Para activar o desactivar un campo se usa `RFConfiguration` CfgItem 0x01; se controla el campo de 13,56 MHz sin reiniciar el módulo. Ten en cuenta que `antennaOn()` y `antennaOff()` en el firmware existente **no** hacen esto: solo modifican un booleano. Por ello, en el firmware distribuido ambos campos permanecen encendidos.
 
-## Results
+## Resultados
 
-Success per attempt, by RF level:
+Proporción de lecturas correctas por intento, por nivel de RF:
 
-| level | soloL | soloR | both (L/R) | alt (L/R) | both reads/s | alt reads/s |
+| nivel | soloL | soloR | both (I/D) | alt (I/D) | lecturas/s both | lecturas/s alt |
 |------:|------:|------:|-----------:|----------:|-------------:|------------:|
 | 0  |   0% |   0% |   0% / 0%  |   0% / 0%   |  0.0 |  0.0 |
 | 1  |   0% |   0% |   0% / 0%  |   0% / 0%   |  0.0 |  0.0 |
@@ -47,63 +34,32 @@ Success per attempt, by RF level:
 | 8  |  33% | 100% |  50% / 60% |  56% / 100% |  9.2 | 11.7 |
 | 9  | 100% |  93% |  70% / 20% |  88% / 25%  |  7.5 |  7.5 |
 | 10 | 100% |  75% |  80% / 20% | 100% / 56%  |  8.3 | 11.7 |
-| 11 | 100% |  97% |  55% / 55% | 100% / 44%  | 10.0 | 10.8 |
-| 12 | 100% | 100% |  70% / 10% | 100% / 22%  |  6.7 |  9.2 |
-| 13 | 100% |   0% |  70% / 40% | 100% / 0%   |  9.2 |  6.7 |
-| 14 | 100% |  33% |  20% / 70% | 100% / 0%   |  7.5 |  6.7 |
-| 15 | 100% |  80% |  10% / 50% | 100% / 22%  |  5.0 |  9.2 |
+| 11 | 100% |  97% |  55% / 55% | 100% / 44% | 10.0 | 10.8 |
+| 12 | 100% | 100% |  70% / 10% | 100% / 22% |  6.7 |  9.2 |
+| 13 | 100% |   0% |  70% / 40% | 100% / 0%  |  9.2 |  6.7 |
+| 14 | 100% |  33% |  20% / 70% | 100% / 0%  |  7.5 |  6.7 |
+| 15 | 100% |  80% |  10% / 50% | 100% / 22% |  5.0 |  9.2 |
 
-## What it says
+## Interpretación
 
-**1. The facing antenna is expensive, and the cost is not small.**
-Alone, each reader is at or near 100% across almost the whole usable range. With
-both carriers up, the same levels drop to 50–85%, and the right reader falls to
-10–20% from level 9 upward. At level 12 the right reader loses nine reads out of
-ten purely because the other antenna is transmitting.
+**1. La antena enfrentada perjudica mucho la lectura.** Por separado, cada lector se acerca al 100 % en casi todo el rango útil. Con ambos campos activos, los mismos niveles bajan al 50–85 %, y el lector derecho cae al 10–20 % desde el nivel 9. En el nivel 12, el lector derecho pierde nueve de cada diez lecturas únicamente porque la otra antena está transmitiendo.
 
-**2. Alternating the carriers recovers nearly all of it.**
-At level 3 the pair goes from 58%/83% to **100%/100%**. At level 7, from
-83%/50% to **100%/100%**. Alternation costs about 15% of the attempt rate — four
-extra commands per iteration — and still comes out ahead on raw throughput:
-18.3 reads/s against 13.3 at level 7, because attempts stop being wasted.
+**2. Alternar los campos recupera casi todas las lecturas.** En el nivel 3, ambos lectores pasan del 58 %/83 % al **100 %/100 %**. En el nivel 7 pasan del 83 %/50 % al **100 %/100 %**. La alternancia reduce alrededor de un 15 % la tasa de intentos —cuatro comandos adicionales por iteración— y aun así logra mayor rendimiento bruto: 18,3 lecturas/s frente a 13,3 en el nivel 7, porque se desperdician menos intentos.
 
-**3. The best operating points are alternating carriers at level 3 or level 7.**
-Those two cells are the only ones in the matrix where both readers are at 100%,
-and they are also the two highest throughputs measured. The compiled default was
-level 3 and is now 7, which keeps margin without approaching the over-driven
-end of the range.
+**3. Los mejores puntos de operación son la alternancia en nivel 3 o 7.** Son las únicas dos combinaciones de la tabla donde ambos lectores alcanzan el 100 %, y también las dos tasas más altas medidas. El valor predeterminado compilado era 3 y ahora es 7, lo que conserva margen sin acercarse al extremo de potencia excesiva.
 
-**4. Do not go above level 8.**
-The right reader degrades there even with the other carrier off (level 13 solo:
-0%), so that is the module being over-driven, not interference. Alternation
-cannot rescue it.
+**4. No superes el nivel 8.** El lector derecho también empeora con el otro campo apagado (en el nivel 13, la fase individual da 0 %), lo que indica que el módulo está sobreexcitado, no que haya interferencia. La alternancia no puede corregirlo.
 
-**5. Neither reader ever read the other's tag.**
-Across all 64 cells, at every power level, the left reader saw only
-`1D33DBDA0D1080` and the right only `1D34DBDA0D1080`. No cross-reads, so the
-counts above are honest and a high-power setting is not being flattered by the
-far chip. (The same check on the *faulty* unit did show both boxes carrying one
-UID — one more symptom of that unit, not of the design.)
+**5. Ningún lector llegó a leer la etiqueta del otro.** En las 64 combinaciones y todos los niveles de potencia, el lector izquierdo solo vio `1D33DBDA0D1080` y el derecho solo `1D34DBDA0D1080`. No hubo lecturas cruzadas; por tanto, los recuentos son válidos y un ajuste de alta potencia no se beneficia artificialmente de la etiqueta lejana. (La misma comprobación en la unidad *defectuosa* sí mostró un UID en ambas cajas: otro síntoma de esa unidad, no del diseño.)
 
-## Recommended working method
+## Método de trabajo recomendado
 
-1. **Switch the idle reader's carrier off while the other reads.** This is the
-   single largest reliability gain available and it is currently not done at all.
-   It needs `RFConfiguration` CfgItem 0x01; `antennaOn()` / `antennaOff()` are
-   no-ops today, which also means the "silence the field when the platform is
-   empty" behaviour does not actually silence anything.
-2. **Operate at level 3 or 7.** Avoid 9 and above. (7 was adopted as the
-   compiled default.)
-3. **Re-run the auto-calibration in the alternating regime.** It currently
-   measures with both carriers up, so it is optimising the wrong landscape: it
-   chose level 4, where alternation measures 56% on the left.
-4. **Keep scoring the weaker reader.** The data still justifies it — the total
-   would happily pick a cell where one side is at 20%.
+1. **Apaga el campo del lector inactivo mientras lee el otro.** Es la mayor mejora de fiabilidad disponible y todavía no se aplica. Requiere `RFConfiguration` CfgItem 0x01; actualmente `antennaOn()` y `antennaOff()` no hacen nada, por lo que la función que debería silenciar el campo cuando la plataforma está vacía tampoco lo apaga realmente.
+2. **Trabaja en nivel 3 o 7.** Evita el nivel 9 y superiores. (Se adoptó 7 como valor predeterminado compilado.)
+3. **Vuelve a ejecutar la autocalibración alternando los campos.** Actualmente mide con ambos campos activos y optimiza un escenario distinto: eligió el nivel 4, donde la alternancia mide 56 % en el lector izquierdo.
+4. **Evalúa el lector más débil.** Los datos aún lo justifican: una puntuación total podría elegir una combinación donde un lado solo alcance el 20 %.
 
-## Caveats
+## Salvedades
 
-- One unit, one spool, one geometry, 1.2 s per cell. The solo-left column is
-  visibly noisy (42% at level 3, 18% at level 4, 100% at level 9), so individual
-  cells should not be over-read; the phase-to-phase comparison is the robust part.
-- A second unit on the bench has a defective right-hand reader and was excluded:
-  it answers no PN532 command reliably and cannot read 4-byte UIDs at all.
+- Una unidad, una bobina, una geometría y 1,2 s por combinación. La columna individual izquierda es claramente variable (42 % en nivel 3, 18 % en nivel 4 y 100 % en nivel 9); no conviene sacar conclusiones de una sola combinación. La comparación entre fases es lo más fiable.
+- La segunda unidad del banco tiene defectuoso el lector derecho y se excluyó: no responde de forma fiable a ningún comando PN532 y no puede leer UID de 4 bytes.

@@ -1,39 +1,34 @@
-# MakerWorld listing — copy-paste kit
+# Lista de MakerWorld — kit de pegado y copia
 
-Everything needed to publish the TigerScale V3 enclosure on
-[MakerWorld](https://makerworld.com). Copy the blocks below straight into the
-upload form.
+Todo lo necesario para publicar la carcasa de TigerScale V3 en
+[MakerWorld](https://makerworld.com). Copia los bloques siguientes directamente en el
+formulario de subida.
 
-One note before you start. **The print settings are yours to fill in** — they are
-marked `<<TODO>>` below, because inventing a layer height or a print time for a
-model I have not sliced would be worse than leaving a gap.
+Una nota antes de comenzar. **Los ajustes de impresión son tuyos para completar** — están
+marcados `<<TODO>>` a continuación, ya que inventar una altura de capa o un tiempo de impresión para un
+modelo que no he cortado sería peor que dejar una brecha.
 
-The listing is live, and MakerWorld is now the only place the enclosure is
-published: `README.md`, [HARDWARE.md](HARDWARE.md), `TRADEMARK.md` and the web
-installer all link there. The model itself is `TigerScale-V3-Case-1.0.1.3mf`, a
-Bambu Studio project with the plates already laid out.
+La lista está activa, y MakerWorld es ahora el único lugar donde se publica la carcasa: `README.md`, [HARDWARE.md](HARDWARE_ES.md), `TRADEMARK.md` y el instalador web todos apuntan allí. El modelo en sí es `TigerScale-V3-Case-1.0.1.3mf`, un proyecto de Bambu Studio con las placas ya dispuestas.
 
 ---
 
-## Title
+## Título
 
-> TigerScale V3 — Smart Filament Scale with NFC (ESP32-S3 Touchscreen)
+> TigerScale V3 — Escala de filamento inteligente con NFC (Pantalla táctil ESP32-S3)
 
-MakerWorld truncates around 60 characters in cards, so the important words are
-first. Alternatives if you want to A/B it:
+MakerWorld corta alrededor de 60 caracteres en las tarjetas, por lo que las palabras importantes son primero. Alternativas si quieres A/B:
 
-- `TigerScale V3 — The Filament Scale That Knows Your Spool`
-- `TigerScale V3 — NFC Filament Scale, 3.5" Touchscreen, Open Source`
+- `TigerScale V3 — La Escala de Filamento que Conoce tu Bobina`
+- `TigerScale V3 — Escala de Filamento con NFC, Pantalla táctil de 3.5", Código abierto`
 
-## Summary / short description
+## Resumen / descripción corta
 
-> An open-source connected scale that identifies your filament spool by NFC and
-> tells you exactly how much filament is left. Put the spool down — it reads the
-> tag, weighs it, subtracts the empty spool weight and syncs the result.
+> Una escala conectada de código abierto que identifica tu bobina de filamento mediante NFC y
+> te dice exactamente cuánto filamento queda. Coloca la bobina — lee la etiqueta, pesa la bobina, resta el peso vacío de la bobina y sincroniza el resultado.
 
-## Description
+## Descripción
 
-Paste as-is. MakerWorld supports basic Markdown.
+Pega tal cual. MakerWorld soporta Markdown básico.
 
 ```markdown
 ## What it is
@@ -192,9 +187,9 @@ TigerTag protocol: https://github.com/TigerTag-Project/TigerTag-RFID-Guide
 
 ---
 
-## Tags / keywords
+## Etiquetas / palabras clave
 
-MakerWorld allows a limited number, so these are ordered by usefulness:
+MakerWorld permite un número limitado, por lo que estas están ordenadas por utilidad:
 
 ```
 filament, spool, scale, nfc, rfid, esp32, esp32s3, tigertag, filament-management,
@@ -202,67 +197,55 @@ filament, spool, scale, nfc, rfid, esp32, esp32s3, tigertag, filament-management
 lvgl, functional, electronics-enclosure
 ```
 
-## Category
+## Categoría
 
-**Tools & Gadgets → 3D Printer Accessories** (or *Hobby & DIY → Electronics* if the
-accessory category feels too narrow).
+**Herramientas y Gadgets → Accesorios de impresora 3D** (o *Hobbie y DIY → Electrónica* si la categoría de accesorio se siente demasiado estrecha).
 
-## License
+## Licencia
 
-The firmware is MIT. Pick the model licence deliberately — they are not the same
-thing, and MakerWorld's default may not be what you want:
+El firmware está licenciado MIT. Elige la licencia del modelo deliberadamente — no son la misma cosa, y la predeterminada de MakerWorld puede no ser lo que quieres:
 
-| Licence | Effect |
+| Licencia | Efecto |
 |---|---|
-| **CC BY** | Anyone may remix and sell, with attribution. Most permissive, matches the MIT firmware. |
-| **CC BY-SA** | Remixes must stay under the same licence. |
-| **CC BY-NC** | No commercial use. Blocks resellers — but also blocks anyone selling printed kits to help the project spread. |
+| **CC BY** | Cualquiera puede remixar y vender, con atribución. Más permisiva, coincide con el firmware MIT. |
+| **CC BY-SA** | Los remixes deben mantenerse bajo la misma licencia. |
+| **CC BY-NC** | Uso comercial no permitido. Bloquea a los reventa — pero también bloquea a cualquiera que venda kits impresas para ayudar a que el proyecto se expanda. |
 
-Given the firmware is MIT and the project's stated position is "build it, sell it,
-fork it", **CC BY** is the consistent choice. Worth a moment's thought, since it is
-awkward to tighten later.
+Dado que el firmware es MIT y la posición del proyecto está declarada como "constrúyelo, vendámoslo, forquearlo", **CC BY** es la elección consistente. Vale la pena un momento de reflexión, ya que es incómodo ajustarlo más tarde.
 
-## Files to upload
+## Archivos para subir
 
-| File | Status |
+| Archivo | Estado |
 |---|---|
-| `.3mf` project, pre-arranged with plates and settings | `TigerScale-V3-Case-1.0.1.3mf` |
-| Individual `.stl` parts | not published — the 3MF carries every part |
-| `README` / assembly PDF | optional; the repo covers it |
+| Proyecto `.3mf`, previamente organizado con placas y ajustes | `TigerScale-V3-Case-1.0.1.3mf` |
+| Partes individuales `.stl` | no publicados — el `.3mf` lleva cada parte |
+| `README` / PDF de montaje | opcional; el repositorio lo cubre |
 
-The V2 scale shipped a single `.3mf` containing four build variants (motor / no
-motor × 1 or 2 readers) so people could just pick a plate and slice. That worked
-well and is worth repeating — V3 has no motor, but a 1-reader and a 2-reader
-variant would cover the same ground.
+La escala V2 envió un solo `.3mf` que contenía cuatro variantes de construcción (motor / sin motor × 1 o 2 lectores) para que las personas pudieran simplemente elegir una placa y cortar. Eso funcionó bien y merece repetirse — V3 no tiene motor, pero una variante de 1 lector y una de 2 lectores cubrirían lo mismo.
 
-## Photos and cover image
+## Fotos y imagen de portada
 
-MakerWorld's algorithm leans heavily on the cover image, and a screen showing real
-data beats a render every time.
+El algoritmo de MakerWorld se basa fuertemente en la imagen de portada, y una pantalla mostrando datos reales supera a un render cada vez.
 
-- **Cover:** the assembled scale with a spool on it, screen lit and showing a
-  weight and material name. The photo already taken for this project is close to
-  ideal — clean desk, spool in place, screen readable.
-- Angle on the front showing the touchscreen UI
-- Rear or three-quarter showing the spool support
-- One shot of the internals with the wiring visible
-- The wiring diagram itself, `docs/img/wiring-hsu.jpg` — genuinely useful in a
-  listing
-- A short video or GIF of a spool being placed and the weight appearing. If you
-  only add one extra asset, add this one.
+- **Portada:** la escala montada con una bobina sobre ella, pantalla encendida y mostrando un peso y nombre de material. La foto ya tomada para este proyecto es casi ideal — mesa limpia, bobina en su lugar, pantalla legible.
+- Ángulo en la parte frontal mostrando la interfaz de la pantalla táctil
+- Parte trasera o tres cuartos mostrando el soporte de la bobina
+- Una foto de los componentes internos con los cables visibles
+- El propio diagrama de conexión, `docs/img/wiring-hsu.jpg` — verdaderamente útil en una lista
+- Un corto video o GIF de una bobina colocada y el peso apareciendo. Si solo añades un activo adicional, añade este.
 
-## Before publishing — check
+## Antes de publicar — revisa
 
-- [ ] Print settings filled in from a real slice
-- [ ] Assembly steps and fastener sizes filled in
-- [ ] `.3mf` opens clean in Bambu Studio / Orca / PrusaSlicer
-- [ ] Licence chosen deliberately (see above)
-- [ ] Cover photo shows the screen with real data
-- [ ] Links back to the GitHub repo and the Discord
-- [ ] eSun described as a **French pilot programme**, not a worldwide rollout, and
-      Nanovia / Filforme not listed as shipping — they are mid-integration. The
-      manufacturers' scopes are quoted as they stated them; see
+- [ ] Ajustes de impresión completados desde una rebanada real
+- [ ] Pasos de ensamblaje y tamaños de fijaciones completados
+- [ ] `.3mf` se abren correctamente en Bambu Studio / Orca / PrusaSlicer
+- [ ] Licencia elegida deliberadamente (ver arriba)
+- [ ] Fotografía de portada muestra la pantalla con datos reales
+- [ ] Enlaces de regreso al repositorio GitHub y al Discord
+- [ ] eSun descrito como un **programa piloto francés**, no una expansión mundial, y
+      Nanovia / Filforme no listados como en envío — están en fase de integración. Los
+      alcances de los fabricantes se citan según lo declarado por ellos; ver
       `assets/partners/README.md`
-- [ ] Factory spools called **TigerTag+**, not plain TigerTag
-- [x] **After publishing:** add the MakerWorld URL to `README.md` and to the BoM in
-      `HARDWARE.md`, replacing "not yet published for V3"
+- [ ] Bobinas de fábrica llamadas **TigerTag+**, no TigerTag sin más
+- [x] **Después de publicar:** agregar la URL de MakerWorld a `README.md` y al BoM en
+      `HARDWARE.md`, reemplazando "no publicado aún para V3"

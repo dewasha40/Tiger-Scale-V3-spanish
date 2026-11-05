@@ -1,360 +1,198 @@
-# Telemetry contract
+# Contrato de telemetría
 
-What a TigerScale reports about itself, on which channel, how often, and what
-each value actually means. This is the integration reference — for Tiger Studio
-Manager, for a dashboard, for anything reading a scale's state.
+Lo que TigerScale reporta sobre sí mismo, por qué canal, con qué frecuencia y qué significa cada valor. Este es el referente de integración — para Tiger Studio Manager, para un panel de control, para cualquier cosa que lea el estado de una báscula.
 
-[`docs/API.md`](API.md) answers the other half: the scale's own HTTP endpoints
-and its WebSocket, for anything on the same network as the device.
-[`docs/CLOUD.md`](CLOUD.md) answers the privacy question: what leaves the device
-and how to wipe it. This file answers the integration question: the exact field
-names and their semantics. When the firmware changes a field, this file changes
-in the same commit.
+[`docs/API.md`](API_ES.md) responde la otra mitad: los puntos finales HTTP propios de la báscula y su WebSocket, para cualquier cosa en la misma red que el dispositivo.
+[`docs/CLOUD.md`](CLOUD_ES.md) responde la pregunta de privacidad: qué abandona el dispositivo y cómo borrarlo. Este archivo responde la pregunta de integración: los nombres exactos de los campos y su semántica. Cuando el firmware cambia un campo, este archivo cambia en el mismo commit.
 
-## Two channels, different audiences
+## Dos canales, audiencias diferentes
 
-| Channel | Who reads it | Transport |
+| Canal | Quién lo lee | Transporte |
 |---|---|---|
-| Firestore heartbeat | Tiger Studio Manager, the mobile app, any cloud dashboard | `documents:commit` to `users/{uid}/scales/{mac}` |
-| WebSocket `/ws` | the scale's own web UI, on the LAN | `ws://<scale-ip>/ws`, unauthenticated |
+| Latido de Firestore | Tiger Studio Manager, la aplicación móvil, cualquier panel en la nube | `documents:commit` a `users/{uid}/scales/{mac}` |
+| WebSocket `/ws` | la interfaz web propia de la báscula, en la LAN | `ws://<scale-ip>/ws`, no autenticado |
 
-They carry the same battery and power fields under the same names, so a value
-means the same thing whichever side you read it from. Everything below applies to
-both unless a row says otherwise.
+Transportan los mismos campos de batería y potencia bajo los mismos nombres, por lo que un valor significa lo mismo cualquiera que sea el lado desde el que lo leas. Todo lo que sigue aplica a ambos a menos que una fila indique lo contrario.
 
-**Which channel to read, and why.** The split is deliberate, not historical:
+**¿Qué canal leer y por qué.** La división es deliberada, no histórica:
 
-- **Firestore carries what moves slowly and must be reachable from anywhere** —
-  battery, power, signal, firmware, account, counters. A scale only has to be
-  connected; the reader does not have to be on the same network, and does not
-  have to hold a socket open per scale.
-- **The WebSocket carries what moves fast and is needed at once** — the live
-  weight, the tag being read, the workflow phase.
+- **Firestore lleva lo que cambia lentamente y debe ser accesible desde cualquier lugar** — batería, potencia, señal, firmware, cuenta, contadores. Una báscula solo tiene que estar conectada; el lector no tiene que estar en la misma red y no tiene que mantener un socket abierto por báscula.
+- **El WebSocket lleva lo que cambia rápidamente y es necesario de inmediato** — el peso en vivo, la etiqueta que se está leyendo, la fase del flujo de trabajo.
 
-Tiger Studio Manager already works this way: it reads `battery_percent`,
-`is_charging`, `power_source`, `power_state` and `wifi_signal_dbm` from the
-Firestore document, and `weight`, `netWeight`, `containerWeight`, `scaleStatus`,
-`brand`, `material` and `color` from the socket.
+Tiger Studio Manager ya funciona así: lee `battery_percent`, `is_charging`, `power_source`, `power_state` y `wifi_signal_dbm` del documento de Firestore, y `weight`, `netWeight`, `containerWeight`, `scaleStatus`, `brand`, `material` y `color` desde el socket.
 
-The power fields are on the WebSocket as well, and that is not redundancy for its
-own sake: the scale's own web UI has no Firestore access at all, and the socket
-is its only channel.
+Los campos de potencia también están en el WebSocket, y eso no es redundancia por sí mismo: la interfaz web propia de la báscula no tiene acceso a Firestore en absoluto, y el socket es su único canal.
 
-## Cadence
+## Frecuencia
 
-The heartbeat is **every 30 seconds while the screen is on, every 5 minutes once
-the backlight goes off**. A transition between those two states pushes a beat
-immediately, so entering or leaving standby shows up at once rather than at the
-next tick.
+El latido es **cada 30 segundos mientras la pantalla esté encendida, cada 5 minutos una vez que la luz de fondo se apague**. Una transición entre esos dos estados envía un latido inmediatamente, por lo que entrar o salir del modo de espera se muestra de inmediato en lugar de al siguiente tick.
 
-**A cable event pushes one too.** The moment VBUS appears or disappears the scale
-writes, within about a second, in both directions and in standby as well —
-without it, unplugging a scale with its screen off would go unnoticed for five
-minutes. The trigger is VBUS and not `is_charging`, deliberately: a cable cannot
-oscillate, a charger regulator can.
+**Un evento de cable envía uno también.** El momento en que VBUS aparece o desaparece, la báscula escribe, dentro de unos segundos, en ambas direcciones y también en modo de espera — sin ello, desconectar una báscula con la pantalla apagada pasaría desapercibido durante cinco minutos. El disparador es VBUS y no `is_charging`, deliberadamente: un cable no puede oscilar, un regulador de carga sí.
 
-That beat is an ordinary heartbeat, so it carries **the whole power block**, not
-just the two fields that changed: `battery_present`, `battery_percent`,
-`is_charging`, `power_source` and `power_state` are written on every beat, never
-as deltas. The percentage in it is freshly read — a cable event resets the
-coulometer's own 30-second timer and the new value is taken in the same pass,
-before the beat is even scheduled. So plugging in updates the charge level at
-once rather than showing a five-minute-old figure beside a live charging status.
+Ese latido es un latido normal, por lo que lleva **todo el bloque de potencia**, no solo los dos campos que cambian: `battery_present`, `battery_percent`, `is_charging`, `power_source` y `power_state` se escriben en cada latido, nunca como deltas. El porcentaje que contiene es recién leído — un evento de cable reinicia el temporizador de 30 segundos propio del coulómetro y el nuevo valor se toma en la misma pasada, antes de que el latido incluso se programe. Por lo tanto, enchufar actualiza el nivel de carga de inmediato en lugar de mostrar una figura de cinco minutos atrás junto a un estado de carga en vivo.
 
-That second cadence is the one that breaks naive dashboards. **Do not treat
-silence as offline without reading `power_state` first:**
+Esa segunda frecuencia es la que rompe los paneles de control ingenuos. **No trates el silencio como offline sin leer `power_state` primero:**
 
-| Last known `power_state` | Expected gap | Call it offline after |
+| Último `power_state` conocido | Espacio esperado | Llámalo offline después |
 |---|---|---|
 | `active` | 30 s | ~90 s |
 | `screen_off` | 5 min | ~11 min |
 
-A scale in standby is fully awake — CPU running, WiFi associated, HTTP answering.
-Only its backlight is off. It is not asleep and it has not gone anywhere.
+Una báscula en modo de espera está completamente despierta — CPU en ejecución, WiFi asociado, HTTP respondiendo. Solo su luz de fondo está apagada. No está dormida y no ha ido a ningún lado.
 
-## Power and battery
+## Potencia y batería
 
-These six fields are written on **every** heartbeat, never deltas, because they
-are what an operator looks at first and a stale one is worse than none.
+Estos seis campos se escriben en **cada** latido, nunca como deltas, porque son lo que un operador mira primero y un valor obsoleto es peor que ninguno.
 
-| Field | Type | Meaning |
+| Campo | Tipo | Significado |
 |---|---|---|
-| `battery_present` | bool | A cell is fitted and the PMIC can see it. The battery is optional on this hardware. |
-| `battery_percent` | int 0-100, or **null** | Charge level from the AXP2101 coulometer. `null` when no cell is fitted. |
-| `is_charging` | bool, or **null** | Current is actually flowing into the cell. `null` when no cell is fitted. |
-| `power_source` | `"usb"` \| `"battery"` | Whether external power is present. |
-| `power_state` | `"active"` \| `"screen_off"` | Backlight state. Not a sleep state — see above. |
-| `wifi_signal_dbm` | int, or null | RSSI. `null` when it cannot be read. |
+| `battery_present` | bool | Una celda está instalada y el PMIC puede verla. La batería es opcional en esta hardware. |
+| `battery_percent` | int 0-100, o **null** | Nivel de carga desde el coulómetro AXP2101. `null` cuando no hay celda instalada. |
+| `is_charging` | bool, o **null** | Corriente realmente fluye hacia la celda. `null` cuando no hay celda instalada. |
+| `power_source` | `"usb"` \| `"battery"` | Si hay alimentación externa presente. |
+| `power_state` | `"active"` \| `"screen_off"` | Estado de la luz de fondo. No es un estado de sueño — véase arriba. |
+| `wifi_signal_dbm` | int, o null | RSSI. `null` cuando no se puede leer. |
 
-Three distinctions the UI has to get right, because collapsing any of them
-produces a display that lies:
+Tres distinciones que la interfaz tiene que entender correctamente, porque colapsar cualquiera de ellas produce una visualización que miente:
 
-- **`battery_percent: null` is not `0`.** Null means no battery is fitted; zero
-  means one is fitted and flat. Render null as "USB only" or an absent battery
-  icon, never as an empty gauge.
-- **`power_source: "usb"` does not mean charging.** A full cell on a live cable
-  reports `"usb"` with `is_charging: false`. That is the phone behaviour: the
-  bolt goes out when the charging stops, not when the cable comes out. The value
-  comes from the charger's own state machine, not from the presence of VBUS.
-- **`power_state: "screen_off"` is not offline.** It is a live scale with its
-  backlight down, still answering on the LAN.
+- **`battery_percent: null` no es `0`.** Null significa que no hay batería instalada; cero significa que hay una instalada y está descargada. Muestra null como "Solo USB" o un icono de batería ausente, nunca como un indicador vacío.
+- **`power_source: "usb"` no significa que esté cargando.** Una celda llena en un cable vivo reporta `"usb"` con `is_charging: false`. Eso es el comportamiento de la teléfono: el conector se retira cuando la carga se detiene, no cuando el cable se desconecta. El valor proviene del estado máquina del cargador, no de la presencia de VBUS.
+- **`power_state: "screen_off"` no es offline.** Es una báscula viva con su luz de fondo apagada, aún respondiendo en la LAN.
 
-**Charging outranks low.** Below 20% a battery is normally rendered as an alert —
-red gauge, red figure. That rule is suspended while `is_charging` is true: a cell
-at 15% on a live charger is not a problem, it is a cell being fixed, and painting
-it red says the opposite. The firmware's own icon does exactly this, so a
-dashboard that skips the precedence disagrees with the screen in front of the
-user. Order to apply: charging first, then low, then normal.
+**La carga tiene prioridad sobre la baja.** Por debajo del 20% una batería normalmente se muestra como una alerta — indicador rojo, número rojo. Esta regla se suspende mientras `is_charging` es verdadero: una celda al 15% en un cargador vivo no es un problema, es una celda que se está solucionando, y pintarla roja dice lo contrario. El icono propio del firmware hace exactamente esto, por lo que un panel de control que omita la precedencia discrepa con la pantalla frente al usuario. Orden de aplicación: carga primero, luego baja, luego normal.
 
-| Condition | Colour |
+| Condición | Color |
 |---|---|
-| `is_charging` true | charging colour (green), whatever the level |
-| `battery_percent` <= 20 | alert colour (red) |
-| otherwise | neutral |
+| `is_charging` verdadero | color de carga (verde), cualquiera que sea el nivel |
+| `battery_percent` <= 20 | color de alerta (rojo) |
+| de lo contrario | neutro |
 
-The states worth rendering distinctly:
+Los estados que merecen ser mostrados distintamente:
 
-| `battery_present` | `power_source` | `is_charging` | Show |
+| `battery_present` | `power_source` | `is_charging` | Mostrar |
 |---|---|---|---|
-| false | usb | null | On USB, no battery |
-| true | usb | true | Charging, N% |
-| true | usb | false | Charged, on USB, N% |
-| true | battery | false | On battery, N% |
+| falso | usb | nulo | En USB, sin batería |
+| verdadero | usb | verdadero | Cargando, N% |
+| verdadero | usb | falso | Cargado, en USB, N% |
+| verdadero | battery | falso | En batería, N% |
 
-## WiFi signal
+## Señal WiFi
 
-`wifi_signal_dbm` goes out raw on both channels — `WiFi.RSSI()`, a negative dBm
-figure, or `null` (0 on the WebSocket) when not connected. It carries no quality
-bucket, so anything showing bars or a "good / weak" label is deciding that
-itself.
+`wifi_signal_dbm` sale bruto en ambos canales — `WiFi.RSSI()`, un valor negativo en dBm, o `null` (0 en el WebSocket) cuando no esté conectado. No lleva ninguna categoría de calidad, por lo que cualquier cosa que muestre barras o una etiqueta "bueno / débil" está decidiendo eso mismo.
 
-**The canonical scale is four states, 0 to 3.** Not five, and the reason is the
-drawing rather than the arithmetic: the firmware's signal glyph is made of
-exactly three pieces -- an outer arc, an inner arc and the dot -- so it can
-express "nothing reached" plus three degrees and no more. A five-level version
-was built first and had to cut through the middle of the outer arc, which left
-its apex dimmed while its shoulders were lit and read as a wave chopped off at
-the top.
+**La báscula canónica es cuatro estados, 0 a 3.** No cinco, y la razón es el dibujo, no la aritmética: el icono de señal del firmware está hecho de exactamente tres piezas — un arco exterior, un arco interior y el punto — por lo que puede expresar "nada alcanzado" más tres grados y nada más. Una versión de cinco niveles fue construida primero y tuvo que cortar a través del medio del arco exterior, lo que dejó su ápice apagado mientras sus hombros estaban iluminados y leían como una onda cortada en la parte superior.
 
-The firmware draws this in exactly one place: the weigh screen's status bar and
-every row of the network picker call the same builder, so a signal reads
-identically wherever it appears. Reproducing the same four states keeps that
-true across Studio Manager as well.
+El firmware dibuja esto en exactamente un lugar: la barra de estado de la pantalla de pesaje y cada fila del selector de red llaman al mismo constructor, por lo que una señal lee idénticamente dondequiera que aparezca. Reproducir los mismos cuatro estados mantiene eso verdadero también en Studio Manager.
 
-| Level | RSSI | Icon |
+| Nivel | RSSI | Icono |
 |---|---|---|
-| 0 | -100 to -81 dBm | whole glyph dimmed |
-| 1 | -80 to -61 dBm | dot |
-| 2 | -60 to -41 dBm | dot + inner arc |
-| 3 | -40 dBm and above | fully lit, drawn as one solid glyph |
+| 0 | -100 a -81 dBm | todo el icono apagado |
+| 1 | -80 a -61 dBm | punto |
+| 2 | -60 a -41 dBm | punto + arco interior |
+| 3 | -40 dBm y más alto | completamente iluminado, dibujado como un icono sólido |
 
-The arithmetic uses integer truncation, which is what fixes the bands 20 dBm
-apart. A floating-point version shifts every boundary, so keep the floor:
+La aritmética usa truncamiento de enteros, lo que fija las bandas a 20 dBm de distancia. Una versión flotante desplaza cada límite, así que mantén el piso:
 
 ```js
 const level = rssi == null || rssi === 0 ? null
   : Math.floor((Math.min(-40, Math.max(-100, rssi)) + 100) * 3 / 60);
 ```
 
-**One signal, one number — but not one question.** The status bar reports the
-link actually in use; the network picker reports what each access point is
-broadcasting. On a network with several access points sharing an SSID these
-legitimately differ, and a scale reading -79 dBm while the picker shows a -35 dBm
-AP of the same name is not a bug in either display: it means the scale is
-associated with the wrong radio. `wifiBeginBestAp()` is what prevents that, by
-forcing a full-channel scan sorted by signal instead of the driver's default
-first-match behaviour.
+**Una señal, un número — pero no una sola pregunta.** La barra de estado reporta el enlace realmente en uso; el selector de red reporta lo que cada punto de acceso está transmitiendo. En una red con varios puntos de acceso compartiendo un SSID, estos diferencias son legítimas, y una báscula que lea -79 dBm mientras el selector muestra un AP -35 dBm del mismo nombre no es un error en ninguna de las pantallas: significa que la báscula está asociada al radio equivocado. `wifiBeginBestAp()` es lo que previene eso, forzando un escaneo completo de canal ordenado por señal en lugar del comportamiento por defecto del driver de primer coincidencia.
 
-## Everything else in the heartbeat
+## Todo lo demás en el latido
 
-**Sent on every heartbeat**, alongside the power fields above:
+**Enviado en cada latido**, junto con los campos de potencia anteriores:
 
-`workflow_phase`, `send_phase`, `current_weight_g`, `session_id`,
-`sessions_started`, `send_ok_count`, `send_fail_count`, `rfid_read_ok_count`,
-`rfid_read_fail_count`, `auto_tare_count`, `workflow_reset_count`,
-`last_measurement_uid_1`, `last_measurement_uid_2`,
-`last_measurement_weight_g`, `last_measurement_status`, and the three LAN
-live-view fields below.
+`workflow_phase`, `send_phase`, `current_weight_g`, `session_id`, `sessions_started`, `send_ok_count`, `send_fail_count`, `rfid_read_ok_count`, `rfid_read_fail_count`, `auto_tare_count`, `workflow_reset_count`, `last_measurement_uid_1`, `last_measurement_uid_2`, `last_measurement_weight_g`, `last_measurement_status`, y los tres campos de vista en LAN siguientes.
 
-**Sent only when the value changed** (and in every full snapshot):
-`current_spool_uid_1`, `current_spool_uid_2`, `calibration_factor`,
-`ip_address`.
+**Enviado solo cuando el valor cambió** (y en cada snapshot completo):
+`current_spool_uid_1`, `current_spool_uid_2`, `calibration_factor`, `ip_address`.
 
-**Sent only in a full snapshot** — at boot and when an account is attached:
+**Enviado solo en un snapshot completo** — al encender y cuando se adjunta una cuenta:
 `fw_version`, `mdns_hostname`, `mac`, `hardware_revision`, `display_name`.
 
-A consumer must therefore treat an absent field as "unchanged", never as "null".
-Only an explicit `nullValue` means null.
+Un consumidor debe tratar un campo ausente como "no cambió", nunca como "nulo". Solo un `nullValue` explícito significa nulo.
 
-Timestamps are server-set. The board carries a battery-backed PCF85063 clock the
-firmware does not read yet, and it deliberately runs no NTP for this.
+Los timestamps están establecidos por el servidor. La placa lleva un reloj PCF85063 alimentado por batería que el firmware aún no lee, y deliberadamente no corre NTP para esto.
 
-## LAN live view: the screen itself
-
-Three fields let Tiger Studio take a screenshot of the scale without asking the
-user for anything, the same contract as Tiger Touch's LAN mode. They are written
-on every heartbeat, and at once when the switch or the code changes on the
-scale (Settings > LAN).
-
-| Field | Type | Meaning |
+| Campo | Tipo | Significado |
 |---|---|---|
-| `lan_live` | bool | live view is on (the default) |
-| `lan_access_code` | string | six characters, letters of both cases and digits, without `l`, `I`, `O`, `0` or `1`, e.g. `J6fxda`. **Compared case-sensitively.** |
-| `lan_url` | string or null | `http://<ip>:81`, the base of the stream, while live view is on and the scale has an address; null otherwise |
+| `lan_live` | bool | vista en vivo está activa (predeterminado) |
+| `lan_access_code` | string | seis caracteres, letras mayúsculas y minúsculas y dígitos, sin `l`, `I`, `O`, `0` o `1`, p. ej. `J6fxda`. **Se compara de forma sensible a mayúsculas y minúsculas.** |
+| `lan_url` | string o null | `http://<ip>:81`, la base del flujo, mientras la vista en vivo esté activa y la escala tenga una dirección; null en otro caso |
 
-- **`lan_access_code` is a secret.** Only the owner can read this document.
-  Never copy it, or a URL carrying it, anywhere another user can read: a shared
-  or public inventory, a friend's view, an export, a log, analytics. The scale
-  itself never logs it.
-- **One frame is a screenshot.** `GET {lan_url}/stream?c={lan_access_code}`
-  answers `200` with a chunked `application/octet-stream`, or `403` for a wrong
-  code. Both carry `Access-Control-Allow-Origin: *`. Read until the first
-  `FRAME_END`, then close: a new viewer is sent the whole screen first, within
-  about half a second.
-- **Two viewers at most.** The scale serves two streams at once, and a browser
-  on Settings > LAN > Live view is one of them. Close the connection as soon as
-  the frame is in.
-- **No stream while live view is off**, while the scale has no WiFi, or while
-  its own pairing screen is up; `lan_url` being null covers the first two.
-- **A sleeping screen is black, and the frame says so faithfully.** When
-  `power_state` is `"screen_off"`, first `POST {lan_url}/tap?c={code}&x=240&y=160`:
-  on a dark screen a press only wakes it and is swallowed, exactly as a finger's
-  would be, so it opens nothing. Read the frame about a second and a half later.
-  The scale goes back to sleep on its own after its usual delay.
+- **`lan_access_code` es un secreto.** Solo el propietario puede leer este documento.
+  Nunca lo copies, ni un URL que lo lleve, en ningún lugar donde otro usuario pueda leerlo: un inventario compartido o público, una vista de un amigo, una exportación, un registro, análisis. La escala en sí nunca registra este código.
+- **Un marco es una captura de pantalla.** `GET {lan_url}/stream?c={lan_access_code}` responde `200` con un `application/octet-stream` fragmentado, o `403` para un código incorrecto. Ambos llevan `Access-Control-Allow-Origin: *`. Lee hasta el primer `FRAME_END`, luego cierra: un nuevo visualizador recibe toda la pantalla primero, dentro de aproximadamente medio segundo.
+- **Máximo dos visualizadores.** La escala sirve dos flujos a la vez, y un navegador en Ajustes > LAN > Vista en vivo es uno de ellos. Cierra la conexión tan pronto como el marco esté en.
+- **No hay flujo mientras la vista en vivo esté apagada**, mientras la escala no tenga WiFi, o mientras su propia pantalla de emparejamiento esté activa; `lan_url` siendo null cubre los primeros dos.
+- **Una pantalla dormida es negra, y el marco lo dice fielmente.** Cuando `power_state` es `"screen_off"`, primero `POST {lan_url}/tap?c={code}&x=240&y=160`: en una pantalla oscura, una presión solo despierta y es absorbida, exactamente como una dedo lo haría, por lo que no abre nada. Lee el marco unos segundos y medio después.
+  La escala vuelve a dormir sola después de su retardo habitual.
 
-The stream is a sequence of messages, little-endian, the first byte giving the
-type:
+El flujo es una secuencia de mensajes, little-endian, el primer byte dando el tipo:
 
-| Byte | Message | Then |
+| Byte | Mensaje | Luego |
 |---|---|---|
-| `1` | HELLO | width (u16, 480), height (u16, 320), band width (u16, 16) |
-| `2` | FRAME_BEGIN | nothing |
-| `5` | BAND | band index (u8, 0-29), length (u16), that many bytes of encoded pixels |
-| `4` | FRAME_END | nothing: the frame is complete, draw it now |
-| `3` | PING | nothing, every 5 s |
+| `1` | HELLO | ancho (u16, 480), alto (u16, 320), ancho de banda (u16, 16) |
+| `2` | FRAME_BEGIN | nada |
+| `5` | BAND | índice de banda (u8, 0-29), longitud (u16), esa cantidad de bytes de píxeles codificados |
+| `4` | FRAME_END | nada: el marco está completo, dibújalo ahora |
+| `3` | PING | nada, cada 5 s |
 
-A band is 16 screen columns. Its pixels are RGB565, ordered down a column and
-then right to left across the band: pixel `i` of band `n` lands at
-`x = n*16 + 15 - floor(i / 320)`, `y = i % 320`. The encoding is a run of
-tokens: `t < 0x80` is `t+1` literal pixels (2 bytes each) that follow;
-`0x80 <= t < 0xFF` is one pixel repeated `t-0x80+2` times; `t == 0xFF` is a
-u16 count, then one pixel repeated that many times. `live_page.h` in the
-firmware is a complete decoder in fifty lines of JavaScript.
+Una banda es 16 columnas de la pantalla. Sus píxeles son RGB565, ordenados hacia abajo en una columna y luego de derecha a izquierda en la banda: el píxel `i` de la banda `n` cae en `x = n*16 + 15 - floor(i / 320)`, `y = i % 320`. La codificación es una secuencia de tokens: `t < 0x80` es `t+1` píxeles literales (2 bytes cada uno) que siguen; `0x80 <= t < 0xFF` es un píxel repetido `t-0x80+2` veces; `t == 0xFF` es un contador u16, luego un píxel repetido esa cantidad de veces. `live_page.h` en el firmware es un decodificador completo en cincuenta líneas de JavaScript.
 
-## The WebSocket frame
+## El marco WebSocket
 
-`ws://<scale-ip>/ws` carries the live view of the same device for its own web UI:
-a JSON object per message, delta-compressed the same way, with a full snapshot on
-connect and every 30 s.
+`ws://<scale-ip>/ws` lleva la vista en vivo del mismo dispositivo para su propia interfaz web: un objeto JSON por mensaje, comprimido por diferencia de la misma manera, con una instantánea completa al conectar y cada 30 s.
 
-Live fields: `weight`, `netWeight`, `containerWeight`, `uid`, `uid2`,
-`uid_left`, `uid_right`, `uid_twin`, `scaleStatus`, `brand`, `material`,
-`color`, `cloud`, `firebaseAuth`, `db_updating`, plus the five power fields
-`battery_present`, `battery_percent`, `is_charging`, `power_source`,
-`power_state`.
+Campos en vivo: `weight`, `netWeight`, `containerWeight`, `uid`, `uid2`, `uid_left`, `uid_right`, `uid_twin`, `scaleStatus`, `brand`, `material`, `color`, `cloud`, `firebaseAuth`, `db_updating`, más los cinco campos de estado de energía `battery_present`, `battery_percent`, `is_charging`, `power_source`, `power_state`.
 
-Snapshot-only fields: `firebaseConfigured`, `firebaseEmail`,
-`firebaseDisplayName`, `calibrationFactor`, `uptime_s`, `fw_version`, `db_ok`,
-`db_checked_s`.
+Campos solo en instantáneas: `firebaseConfigured`, `firebaseEmail`, `firebaseDisplayName`, `calibrationFactor`, `uptime_s`, `fw_version`, `db_ok`, `db_checked_s`.
 
-One difference from Firestore, and it is deliberate: JSON has no typed null in
-this frame's delta encoding, so **`battery_percent` is `-1`, not null, when no
-cell is fitted**. `battery_present` is what you branch on either way.
+Una diferencia de Firestore, y es deliberada: JSON no tiene nulos tipados en esta codificación de diferencias, así que **`battery_percent` es `-1`, no null, cuando no hay celda instalada**. `battery_present` es lo que debes ramificar en cualquier caso.
 
-## Where this lives in the firmware
+## Donde esto se encuentra en el firmware
 
-| What | Function |
+| Lo que | Función |
 |---|---|
-| Reading the PMIC | `axpChargeState()`, `axpBatteryLevel()` |
-| Owning the state | `gBattery`, refreshed by `pollBatteryState()` from the main loop |
-| Firestore payload | `sendScaleHeartbeat()` |
-| WebSocket payload | `buildWsFrame()` |
+| Leyendo el PMIC | `axpChargeState()`, `axpBatteryLevel()` |
+| Propietario del estado | `gBattery`, actualizado por `pollBatteryState()` desde el bucle principal |
+| Carga Firestore | `sendScaleHeartbeat()` |
+| Carga WebSocket | `buildWsFrame()` |
 
-`pollBatteryState()` runs from `loop()` rather than from a screen builder on
-purpose: an earlier version kept the state in `lvglUpdateMainScreen()`, which
-only runs while the weigh screen is displayed, so telemetry froze the moment
-anyone opened Settings.
+`pollBatteryState()` se ejecuta desde `loop()` en lugar de desde un constructor de pantalla a propósito: una versión anterior mantenía el estado en `lvglUpdateMainScreen()`, que solo corre mientras la pantalla de pesaje está mostrada, así que la telemetría se congelaba al momento que alguien abría Ajustes.
 
-Line numbers are in [`CODEMAP.md`](../CODEMAP.md), which is regenerated — do not
-copy them here.
+Los números de línea están en [`CODEMAP.md`](../CODEMAP_ES.md), que se regenera — no los copies aquí.
 
-## Brief for the Studio Manager agent
+## Informe para el agente del Studio Manager
 
-Self-contained; paste it as-is.
+Autónomo; pégalo tal cual.
 
-> You are displaying the state of a TigerScale V3 filament scale. Its telemetry
-> is a Firestore document at `users/{uid}/scales/{mac}`, rewritten by the device
-> on a heartbeat.
+> Estás mostrando el estado de una escala de filamento TigerScale V3. Su telemetría es un documento Firestore en `users/{uid}/scales/{mac}`, reescrito por el dispositivo en un latido.
 >
-> **Cadence.** Every 30 seconds while its screen is on; every 5 minutes once the
-> backlight turns off. The field `power_state` tells you which regime you are in:
-> `"active"` or `"screen_off"`. Entering or leaving standby pushes an immediate
-> heartbeat.
+> **Cadencia.** Cada 30 segundos mientras su pantalla esté encendida; cada 5 minutos una vez que la luz de fondo se apague. El campo `power_state` te dice cuál régimen estás en: `"active"` o `"screen_off"`. Entrar o salir del modo de espera envía un latido inmediato.
 >
-> **Never mark a scale offline on silence alone.** Compare the gap against the
-> regime: over ~90 seconds when `power_state` is `"active"`, over ~11 minutes
-> when it is `"screen_off"`. A scale in `"screen_off"` is fully awake with WiFi
-> associated — only its backlight is off. Showing it as disconnected is wrong.
+> **Nunca marques una escala como fuera de línea solo por silencio.** Compara la brecha contra el régimen: sobre ~90 segundos cuando `power_state` es `"active"`, sobre ~11 minutos cuando es `"screen_off"`. Una escala en `"screen_off"` está completamente despierta con WiFi asociado — solo su luz de fondo está apagada. Mostrarla como desconectada es incorrecto.
 >
-> **Power and battery fields**, present on every heartbeat:
+> **Campos de energía y batería**, presentes en cada latido:
 >
-> - `battery_present` (bool) — the battery is an optional part; many units have
->   none.
-> - `battery_percent` (int 0-100, or null) — null means no battery is fitted.
->   Null is not zero. Render null as "USB only" or no battery indicator; render
->   0 as a flat battery. Collapsing the two produces a display that lies.
-> - `is_charging` (bool, or null) — true only while current is actually flowing
->   into the cell, read from the charger's state machine. A full battery on a
->   live cable reports false. Drop the charging indicator when it goes false,
->   the way a phone does — do not key it on the cable being connected.
-> - `power_source` (`"usb"` or `"battery"`) — whether external power is present.
->   This is not the same question as charging.
-> - `wifi_signal_dbm` (int, or null) — raw RSSI in dBm, null when the scale is
->   not connected. It carries no quality level, so if you show bars or a
->   good/weak label you must derive it — and you must derive it the same way the
->   scale's own network picker does, or the same signal will be described
->   differently in two places. Use 0..5 bars, linear from -100 dBm to -40 dBm,
->   with integer truncation:
+> - `battery_present` (bool) — la batería es una parte opcional; muchas unidades no la tienen.
+> - `battery_percent` (int 0-100, o null) — null significa que no hay batería instalada. Null no es cero. Muestra null como "Solo USB" o sin indicador de batería; muestra 0 como una batería agotada. Colapsar los dos produce una pantalla que miente.
+> - `is_charging` (bool, o null) — verdadero solo mientras la corriente esté realmente fluyendo hacia la celda, leído desde el estado de la máquina de estados del cargador. Una batería llena con un cable vivo reporta falso. Deja el indicador de carga cuando vaya falso, como lo hace un teléfono — no lo active al conectar el cable.
+> - `power_source` (`"usb"` o `"battery"`) — si hay energía externa presente. Esto no es la misma pregunta que la carga.
+> - `wifi_signal_dbm` (int, o null) — RSSI bruto en dBm, null cuando la escala no esté conectada. No lleva nivel de calidad, así que si muestras barras o una etiqueta buena/ débil debes derivarla — y debes derivarla de la misma manera que hace el propio selector de red de la escala, o la misma señal será descrita de forma diferente en dos lugares. Usa 0..5 barras, lineal desde -100 dBm a -40 dBm, con truncamiento entero:
 >   `Math.floor((Math.min(-40, Math.max(-100, rssi)) + 100) * 5 / 60)`.
->   That gives 0 bars at -100..-89, 1 at -88..-77, 2 at -76..-65, 3 at -64..-53,
->   4 at -52..-41, 5 at -40 and above. A floating-point version shifts every
->   boundary, so keep the floor.
+>   Esto da 0 barras en -100..-89, 1 en -88..-77, 2 en -76..-65, 3 en -64..-53, 4 en -52..-41, 5 en -40 y más alto. Una versión flotante desplaza cada umbral, así que mantén el floor.
 >
-> The four combinations worth distinguishing: no battery fitted (USB only);
-> charging at N%; charged and on USB at N%; running on battery at N%.
+> Las cuatro combinaciones que vale la pena distinguir: sin batería instalada (Solo USB); cargando al N%; cargado y en USB al N%; funcionando con batería al N%.
 >
-> **Charging outranks low battery, including for colour.** Below 20% a battery is
-> normally shown as an alert, red. Suspend that while `is_charging` is true and
-> use the charging colour instead, whatever the level: a cell at 15% on a live
-> charger is not a fault, it is a cell being fixed. Apply the rules in this
-> order: charging, then low, then neutral. The scale's own screen does this, so
-> skipping it makes your dashboard contradict the display the user is looking at
-> — a green charging battery on the device and a red alert in the app, for the
-> same scale at the same moment.
+> **La carga supera a la baja batería, incluyendo para el color.** Debajo del 20% una batería se muestra normalmente como una alerta, roja. Suspende eso mientras `is_charging` sea verdadero y usa el color de carga en su lugar, cualquiera que sea el nivel: una celda al 15% con un cargador vivo no es un fallo, es una celda que se está solucionando. Aplica las reglas en este orden: carga, luego baja, luego neutra. La propia pantalla de la escala hace esto, así que saltarla hace que tu panel de control contradiga la pantalla que el usuario está mirando — una batería cargando en verde en el dispositivo y una alerta roja en la app, para la misma escala en el mismo momento.
 >
-> **Absent is not null.** Some fields are written only when they change, and some
-> only in the boot snapshot. A field missing from a heartbeat means unchanged —
-> keep the previous value. Only an explicit null means null.
+> **Ausente no es null.** Algunos campos se escriben solo cuando cambian, y otros solo en la instantánea de arranque. Un campo ausente en un latido significa inalterado — mantén el valor anterior. Solo un null explícito significa null.
 >
-> **Screenshot.** When `lan_live` is true and `lan_url` is not null, fetch
-> `{lan_url}/stream?c={lan_access_code}`: a `403` means the code is stale (wait
-> for the next heartbeat); otherwise read messages until the first
-> `FRAME_END` (byte `4`), decode the bands into a 480x320 image and close the
-> connection. If `power_state` is `"screen_off"` the screen is black: first
-> `POST {lan_url}/tap?c={lan_access_code}&x=240&y=160`, which only wakes it, and
-> read the frame about 1.5 s later. The scale serves two viewers at most, so
-> never hold it open. The
-> format is in the "LAN live view" section of TELEMETRY.md. When `lan_live` is
-> false, say "Live view is off on the scale (Settings > LAN)". Show
-> `lan_access_code` in the scale's details, monospace, with a copy button, and no
-> regenerate button: the code is changed on the scale only.
+> **Captura de pantalla.** Cuando `lan_live` es verdadero y `lan_url` no es null, obtén `{lan_url}/stream?c={lan_access_code}`: un `403` significa que el código es antiguo (espera al siguiente latido); de lo contrario, lee mensajes hasta el primer `FRAME_END` (byte `4`), decodifica las bandas en una imagen 480x320 y cierra la conexión. Si `power_state` es `"screen_off"` la pantalla es negra: primero `POST {lan_url}/tap?c={lan_access_code}&x=240&y=160`, que solo despierta y luego lee el marco unos 1.5 s después. La escala sirve a máximo dos visualizadores, así que nunca lo dejes abierto. El formato está en la sección "Vista en vivo LAN" de TELEMETRY.md. Cuando `lan_live` es falso, di "La vista en vivo está apagada en la escala (Ajustes > LAN)". Muestra `lan_access_code` en los detalles de la escala, monoespaciado, con un botón de copia, y sin botón de regenerar: el código se cambia solo en la escala.
 >
-> **`lan_access_code` is a secret** that controls the screen for anyone on that
-> network. Never put it, or a URL carrying it, in anything shared: friends'
-> views, public inventory, exports, logs, MCP output, analytics.
+> **`lan_access_code` es un secreto** que controla la pantalla para cualquiera en esa red. Nunca lo pongas, ni un URL que lo lleve, en nada compartido: vistas de amigos, inventarios públicos, exportaciones, registros, salida de MCP, análisis.
 >
-> Other fields you can surface: `current_weight_g`, `workflow_phase`,
-> `send_phase`, `current_spool_uid_1` / `_2`, `last_measurement_weight_g`,
-> `last_measurement_status`, `ip_address`, `fw_version`, `display_name`, and the
-> counters `send_ok_count`, `send_fail_count`, `rfid_read_ok_count`,
-> `rfid_read_fail_count`, `auto_tare_count`, `sessions_started`.
+> Otros campos que puedes mostrar: `current_weight_g`, `workflow_phase`, `send_phase`, `current_spool_uid_1` / `_2`, `last_measurement_weight_g`, `last_measurement_status`, `ip_address`, `fw_version`, `display_name`, y los contadores `send_ok_count`, `send_fail_count`, `rfid_read_ok_count`, `rfid_read_fail_count`, `auto_tare_count`, `sessions_started`.

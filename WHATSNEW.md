@@ -1,62 +1,40 @@
-# What's new on your TigerScale
+# ¿Qué hay de nuevo en tu TigerScale
 
-The short version of every release, newest first — one scroll, no jargon.
-The full story for each version lives in [docs/release-notes/](docs/release-notes/).
+La versión más breve de cada lanzamiento, más reciente primero — un desplazamiento, sin jerga.
+La historia completa de cada versión se encuentra en [docs/release-notes/](docs/release-notes/).
 
-## v3.4.0 — updates you can trust at a glance
+## v3.4.0 — actualizaciones que puedes confiar a simple vista
 
-The Update screen now shows what you run, what is waiting (amber banner,
-big blue Install), and promises out loud that WiFi, account and calibration
-survive the ride. Settings even flags a waiting update from the list —
-orange icon, "3.3.1 > 3.4.0". [Full notes](docs/release-notes/v3.4.0.md)
+La pantalla de actualización ahora muestra lo que ejecutas, lo que está pendiente (bandera amarilla, gran botón azul Instalar), y promete en voz alta que WiFi, cuenta y calibración sobreviven el viaje. Ajustes incluso señala una actualización pendiente de la lista — icono naranja, "3.3.1 > 3.4.0". [Notas completas](docs/release-notes/v3.4.0_ES.md)
 
-## v3.3.0 — the scale makes the first move
+## v3.3.0 — la báscula toma la primera acción
 
-No account linked? The scale now asks — a panel slides in with a single
-blue Sign in button, instead of hoping you find the option in Settings.
-Dismiss it and it politely waits half an hour. [Full notes](docs/release-notes/v3.3.0.md)
+¿No tienes cuenta vinculada? La báscula ahora lo pregunta — un panel se desliza con un único botón azul Iniciar sesión, en lugar de esperar que encuentres la opción en Ajustes. Descartarlo y se espera educadamente media hora. [Notas completas](docs/release-notes/v3.3.0_ES.md)
 
-## v3.2.0 — your scale learns manners
+## v3.2.0 — tu báscula aprende modales
 
-- Unbox, plug in, and the scale walks you through it: pick your language,
-  join WiFi, link your account. No reboots, no treasure hunt through menus.
-- Link your TigerTag account by QR code and it just works — name and e-mail
-  on screen seconds after you tap Approve. iPhone included, at last.
-- The scale speaks your language — literally yours: it adopts the language
-  saved on your TigerTag account, and changing it on either the scale or
-  TigerTag Studio changes both. Bem-vindo, Portugal: European Portuguese
-  joins the family, for nine languages total.
-- Calibration went from chore to guided tour: tare, pick a weight, place it,
-  press the blue button when it lights up. The scale even reminds you to do
-  it the first time — politely, from the side of the screen.
-- Honesty upgrades: a red "No account" badge when nothing is linked, a
-  "Weighing error" instead of writing an impossible negative weight into
-  your inventory, and a screen that no longer plays dead when you leave
-  Settings.
-- Sold your scale? Settings > Factory reset wipes it clean and hands the
-  next owner the same guided welcome.
-- For the curious: the live view now stays connected through account
-  pairing, so you can watch the QR screen from a browser across the room.
+- Desempaca, conecta y la báscula te guía paso a paso: elige tu idioma, únete a WiFi, vincula tu cuenta. Sin reinicios, sin búsqueda en menús.
+- Vincula tu cuenta TigerTag mediante código QR y funciona inmediatamente — nombre y correo electrónico en pantalla segundos después de pulsar Aceptar. Incluido iPhone, por fin.
+- La báscula habla tu idioma — literalmente tuyo: adopta el idioma guardado en tu cuenta TigerTag, y cambiarlo en la báscula o en TigerTag Studio cambia ambos. Bem-vindo, Portugal: portugués europeo se une a la familia, para nueve idiomas en total.
+- La calibración pasó de ser un trabajo a un tour guiado: tara, elige un peso, colócalo, presiona el botón azul cuando se ilumine. La báscula incluso te recuerda hacerlo la primera vez — educadamente, desde el lado de la pantalla.
+- Mejoras de honestidad: un distintivo rojo "Sin cuenta" cuando nada esté vinculado, un "Error de pesaje" en lugar de escribir un peso negativo imposible en tu inventario, y una pantalla que ya no se queda en blanco cuando dejas Ajustes.
+- Vendiste tu báscula? Ajustes > Reinicio de fábrica la limpia por completo y entrega al próximo dueño la misma bienvenida guiada.
+- Para los curiosos: la vista en vivo ahora se mantiene conectada mediante el emparejamiento de cuenta, por lo que puedes ver la pantalla QR desde un navegador en la habitación.
 
-[Full notes](docs/release-notes/v3.2.0.md)
+[Notas completas](docs/release-notes/v3.2.0_ES.md)
 
-## v3.1.3 — stubborn updates
+## v3.1.3 — actualizaciones obstinadas
 
-Updates stopped giving up at the first network hiccup, and when one does
-fail, it now tells you why. [Full notes](docs/release-notes/v3.1.3.md)
+Las actualizaciones ya no se rinden al primer contratiempo de red, y cuando una falla, ahora te dice por qué. [Notas completas](docs/release-notes/v3.1.3_ES.md)
 
-## v3.1.2 — no more silent updates
+## v3.1.2 — ya no hay actualizaciones silenciosas
 
-An update started from the scale's own screen reports itself like any other,
-and a failed one no longer stops the scale from finding the next.
-[Full notes](docs/release-notes/v3.1.2.md)
+Una actualización iniciada desde la pantalla de la báscula se reporta como cualquier otra, y una fallida ya no impide que la báscula busque la siguiente. [Notas completas](docs/release-notes/v3.1.2_ES.md)
 
-## v3.1.1 — tidier surroundings
+## v3.1.1 — entorno más ordenado
 
-The install page was rebuilt, and the scale's web interface now points at
-the TigerTag ecosystem. [Full notes](docs/release-notes/v3.1.1.md)
+La página de instalación fue reestructurada, y la interfaz web de la báscula ahora apunta al ecosistema TigerTag. [Notas completas](docs/release-notes/v3.1.1_ES.md)
 
-## v3.1.0 — updates that knock
+## v3.1.0 — actualizaciones que tocan
 
-The scale checks for updates by itself and asks you once — say no and it
-stays quiet for a day. [Full notes](docs/release-notes/v3.1.0.md)
+La báscula busca actualizaciones por sí misma y te pregunta una vez — di no y se queda callada un día. [Notas completas](docs/release-notes/v3.1.0_ES.md)

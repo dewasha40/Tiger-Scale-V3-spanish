@@ -1,195 +1,141 @@
-# Revue UI/UX tactile — panel 3.5" (v3.1.3, banc via live view)
+# Revisión UI/UX táctil — panel 3.5" (v3.1.3, banc via live view)
 
-Date : 2026-08-08 · Périmètre : interface embarquée LVGL (écran principal, tous les
-sous-écrans de Réglages, workflow de pesée avec opérateur au banc) · Méthode :
-live view `http://<ip>/live` (taps uniquement), croisement code en lecture seule.
-Captures : dossier de session hors dépôt, référencées ici par nom de fichier.
-Convention d'annotation : après action, marquer chaque constat **fixed / deferred / rejected**.
+Fecha : 2026-08-08 · Perímetro : interfaz embarcada LVGL (pantalla principal, todos los subpantallas de Configuración, flujo de pesaje con operador en el banc) · Método : live view `http://<ip>/live` (taps únicamente), cruzamiento de código en lectura solo. Capturas : carpeta de sesión fuera de repositorio, referenciadas aquí por nombre de archivo. Convención de anotación : después de la acción, marcar cada constat **fixed / deferred / rejected**.
 
-## Résumé exécutif
+## Resumen ejecutivo
 
-L'interface est cohérente et lisible (bandeau-retour systématique, cartes, rail
-de défilement, valeurs affichées directement dans la liste Réglages) et le
-workflow nominal de pesée fonctionne vite (~6 s détection, ~10 s données cloud,
-re-pose instantanée grâce au cache). Les deux vrais manques sont des manques de
-*feedback* : un objet sans tag ne provoque strictement aucun message, et l'envoi
-cloud réussi (ou abandonné) n'est jamais confirmé à l'écran. Le reste est de la
-finition à fort rendement : scroll de la liste Réglages perdu à chaque retour,
-régénération du code LAN sans confirmation, libellés non traduits ou tronqués.
+La interfaz es coherente y legible (bandeau de retroalimentación sistemática, tarjetas, barra de desplazamiento, valores mostrados directamente en la lista Configuración) y el flujo nominal de pesaje funciona rápido (~6 s detección, ~10 s datos en la nube, re-pesaje instantáneo gracias al caché). Los dos verdaderos vacíos son vacíos de *retroalimentación* : un objeto sin etiqueta no provoca ningún mensaje, y el envío a la nube exitoso (o abandonado) nunca se confirma en la pantalla. El resto es de la terminación a alto rendimiento : desplazamiento de la lista Configuración perdido en cada retorno, regeneración del código LAN sin confirmación, etiquetas no traducidas o truncadas.
 
-## Statut (2026-08-08, après action)
+## Estado (2026-08-08, después de la acción)
 
-Les 10 quick wins sont traités : 9 **fixed**, 1 **rejected** (n° 3, voir sa ligne).
-Tout le reste — supplément Latin-1 Montserrat (cause racine des accents), refonte de
-l'écran Compte (maquette d'abord), et les accroches par écran non reprises dans les
-quick wins — est **deferred** : réel, non contesté, pour une passe suivante.
+Los 10 quick wins están tratados : 9 **fixed**, 1 **rejected** (n° 3, ver su línea). Todo lo demás — suplemento Latin-1 Montserrat (causa raíz de los acentos), reforma de la pantalla Cuenta (maqueta primero), y las capturas por pantalla no reiteradas en los quick wins — es **deferred** : real, no cuestionado, para una pasada posterior.
 
 ## Quick wins
 
-Classés par impact décroissant ; chaque item ≈ une heure ou moins sauf mention.
+Clasificados por impacto decreciente ; cada ítem ≈ una hora o menos salvo indicación.
 
-| # | Constat (capture) | Recommandation | Effort |
+| # | Constat (captura) | Recomendación | Esfuerzo |
 |---|---|---|---|
-| 1 | Objet sans tag : poids affiché mais badge bloqué sur « Pret », **aucun message même après 15 s** (`objet-sans-tag-288g-toujours-rien`). Un utilisateur avec une bobine non taggée ne sait ni ce qui se passe, ni quoi faire. §21 `handleWeighWorkflow` | Après ~5 s de poids stable (> `MIN_WEIGHT_TO_SEND_G`) sans UID : badge orange « Aucun TigerTag detecte » (+ éventuel hint « Presentez la puce vers un lecteur »). Retour à « Pret » au retrait. **fixed** (badge orange `OLED_STATE_NO_TAG`, tenu tant que le poids est là) | S |
-| 2 | Confirmation d'envoi invisible : les états `WEIGHING`/`SENDING`/`SYNCED` existent (.ino:12760–12767) mais le badge observé passe de « Pret » (pendant toute la montée du poids, `pesee-montee-827g-badge-pret`) directement à « Retirer materiau ». Pesée interrompue = abandon **silencieux** (confirmé opérateur : rien à l'écran, poids non envoyé). | Tenir « Synchronise! » ≥ 2 s avant « Retirer materiau » ; en cas d'abandon (retrait avant stabilisation), badge « Pesee annulee — non envoyee » 2 s ; passer le badge en « Pesee... » dès que le poids monte. **fixed** (« Pesee... » dès l'ouverture de session ; SENDING/SYNCED/ERROR prioritaires sur « Retirer materiau » ; « Pesee annulee » 2 s si UID lu) | S |
-| 3 | Le « 0.0 » au-dessus de TARE est un libellé statique jamais mis à jour (.ino:12690) — il ressemble à une donnée vivante mais ment dès qu'une tare est posée. | Afficher l'offset de tare réel, ou supprimer le chiffre et ne garder que « TARE ». **rejected** — le « 0.0 » statique est l'iconographie du bouton zéro d'une balance de cuisine, voulu tel quel | S |
-| 4 | La liste Réglages repart en haut à chaque retour d'un sous-écran (`runSettingsMenu` reconstruit tout, .ino:5540+). Preuve involontaire : un tap sur la position mémorisée de LAN a rouvert Calibrage (`scroll-reset-mistap-calibrage`). Atteindre Veille = 4 taps ▼ à chaque fois. | Mémoriser l'offset de scroll (static) et le restaurer après reconstruction. **fixed** (offset conservé le temps du menu, remis à zéro à la sortie) | S |
-| 5 | LAN : le bouton de régénération du code (38×38 px, .ino:4642) jouxte le code et **agit sans confirmation** (.ino:4685–4690) — un tap accidentel coupe tous les viewers en cours. | Confirmation `lvglAskYesNo` (contexte boucle bloquante, pas un callback → autorisé) + cible portée à ≥ 44 px. | S |
-| 6 | WiFi : le réseau actuellement connecté n'est **ni coché ni épinglé** dans la liste (`wifi-liste-initiale`), et l'ordre change à chaque scan (`wifi-liste-apres-rescan`). Le picker Langue a déjà le pattern ✓ (contour bleu + coche, `langue-francais-coche`). | Réutiliser ce pattern : SSID connecté épinglé en tête avec coche verte. **fixed** (épinglé en tête, bordure accent + coche verte) | S/M |
-| 7 | « Son: » codé en dur (.ino:3717) : l'écran Volume reste en français quand l'appareil est en anglais (`volume-son-non-traduit-mode-EN`). | Nouvelle clé i18n (8 langues) + `bash scripts/check-i18n.sh`. | S |
-| 8 | Écran RFID : la ligne s'appelle « RFID » (.ino:5794, chevron sans valeur, ligne déséquilibrée) mais l'écran s'intitule « MATERIEL » (I18N_HARDWARE, .ino:4130) ; « PUISSANCE RFID : 3 » sans échelle (3 sur combien ?) ; TEST échoue en « PN532-x no ack » alors que le prérequis « plateau vide » n'est écrit qu'en commentaire source (.ino:10561). | Même libellé ligne/titre ; afficher « 3/5 » ; avant le test, si poids > 0 : « Retirez tout objet du plateau » au lieu de lancer un test qui échouera en jargon. **fixed** (titre « RFID » des deux côtés — le libellé universel plutôt que MATERIEL ; « 3/4 » avec son échelle ; « PUISSANCE RFID » passe aussi par i18n ; le TEST a finalement été **supprimé entièrement** — il n'a jamais passé au banc, et un diagnostic qui ne sait qu'échouer apprend surtout au client que son matériel serait cassé) | S |
-| 9 | Noms marque/matière tronqués en dur à 10 caractères sans ellipse (.ino:12827–12828) : « PLA High Speed » → « PLA High S » (`pesee-donnees-cloud-completes`). | `LV_LABEL_LONG_DOT` (ou défilement circulaire) au lieu de `substring(0,10)`. **fixed** (LONG_DOT \+ max_width, chemin LVGL ; la troncature du chemin raw-gfx hérité reste) | S |
-| 10 | Apostrophes incohérentes : « Code d'acces » (avec) vs « L ecran reste allume », « minutes d inactivite » (i18n.h:486 et voisines, `veille`) — la police possède l'apostrophe. | Uniformiser toutes les chaînes FR avec apostrophe. **fixed** (les deux chaînes fautives) | S |
+| 1 | Objeto sin etiqueta : peso mostrado pero el badge bloqueado en « Listo », **ningún mensaje incluso después de 15 s** (`objet-sans-tag-288g-toujours-rien`). Un usuario con una bobina no etiquetada no sabe ni qué sucede, ni qué hacer. §21 `handleWeighWorkflow` | Mantener « ¡Sincronizando! » ≥ 2 s antes de « Retirar material ». En caso de abandono (retracción antes de estabilización), badge « Pesaje anulado — no enviado » 2 s ; pasar el badge a « Pesaje... » tan pronto como el peso aumente. **fixed** (« Pesaje... » desde la apertura de sesión ; SENDING/SYNCED/ERROR priorizados sobre « Retirar material » ; « Pesaje anulado » 2 s si UID leído) | S |
+| 2 | Confirmación de envío invisible : los estados `WEIGHING`/`SENDING`/`SYNCED` existen (.ino:12760–12767) pero el badge observado pasa de « Listo » (durante toda la subida de peso, `pesee-montee-827g-badge-pret`) directamente a « Retirar material ». Pesaje interrumpido = abandono **silencioso** (confirmado operador : nada en la pantalla, peso no enviado). | Mantener « ¡Sincronizando! » ≥ 2 s antes de « Retirar material » ; en caso de abandono (retracción antes de estabilización), badge « Pesaje anulado — no enviado » 2 s ; pasar el badge a « Pesaje... » tan pronto como el peso aumente. **fixed** (« Pesaje... » desde la apertura de sesión ; SENDING/SYNCED/ERROR priorizados sobre « Retirar material » ; « Pesaje anulado » 2 s si UID leído) | S |
+| 3 | El « 0.0 » encima de TARE es una etiqueta estática nunca actualizada (.ino:12690) — parece una dato vivo pero miente tan pronto como se realiza una tara. | Mostrar el offset de tara real, o eliminar el número y solo mantener « TARE ». **rejected** — el « 0.0 » estático es la iconografía del botón cero de una báscula de cocina, deseado tal cual | S |
+| 4 | La lista Configuración vuelve al principio cada vez que se vuelve a un subpantalla (`runSettingsMenu` reconstruye todo, .ino:5540+). Prueba involuntaria : un tap en la posición memorizada de LAN abrió Calibración (`scroll-reset-mistap-calibrage`). Alcanzar Alergia = 4 taps ▼ cada vez. | Memorizar el offset de desplazamiento (estático) y restaurarlo después de la reconstrucción. **fixed** (offset conservado durante el menú, restablecido a cero al salir) | S |
+| 5 | LAN : el botón de regeneración del código (38×38 px, .ino:4642) se adyunta al código y **actúa sin confirmación** (.ino:4685–4690) — un tap accidental corta todos los viewers en curso. | Confirmación `lvglAskYesNo` (contexto bucle bloqueante, no un callback → autorizado) + objetivo llevado a ≥ 44 px. | S |
+| 6 | WiFi : la red actualmente conectada no está **ni marcada ni fijada** en la lista (`wifi-liste-initiale`), y el orden cambia cada escaneo (`wifi-liste-apres-rescan`). El selector Idioma ya tiene el patrón ✓ (borde azul + marca, `langue-francais-coche`). | Reutilizar este patrón : SSID conectado fijado en cabeza con marca verde. **fixed** (fijado en cabeza, borde destacado + marca verde) | S/M |
+| 7 | « Son: » codificado en duro (.ino:3717) : la pantalla Volumen permanece en francés cuando el dispositivo está en inglés (`volume-son-non-traduit-mode-EN`). | Nueva clave i18n (8 idiomas) + `bash scripts/check-i18n.sh`. | S |
+| 8 | Pantalla RFID : la línea se llama « RFID » (.ino:5794, chevron sin valor, línea desequilibrada) pero la pantalla se titula « MATERIEL » (I18N_HARDWARE, .ino:4130) ; « PUISSANCE RFID : 3 » sin escala (3 de cuántos ?) ; TEST falla en « PN532-x no ack » mientras que el requisito « plataforma vacía » solo está escrito en comentario (.ino:10561). | Mismo etiqueta línea/título ; mostrar « 3/5 » ; antes del test, si peso > 0 : « Retire todo objeto de la plataforma » en lugar de lanzar un test que fallará en jerga. **fixed** (título « RFID » en ambos lados — la etiqueta universal en lugar de MATERIEL ; « 3/4 » con su escala ; « PUISSANCE RFID » pasa también por i18n ; el TEST finalmente fue **eliminado por completo** — nunca pasó al banc, y un diagnóstico que solo sabe fallar enseña principalmente al cliente que su material sería roto) | S |
+| 9 | Nombres marca/materia troncados en duro a 10 caracteres sin elipsis (.ino:12827–12828) : « PLA High Speed » → « PLA High S » (`pesee-donnees-cloud-completes`). | `LV_LABEL_LONG_DOT` (o desplazamiento circular) en lugar de `substring(0,10)`. **fixed** (LONG_DOT \+ max_width, camino LVGL ; la truncación del camino raw-gfx heredado sigue) | S |
+| 10 | Apostrofes incoherentes : « Código d'accès » (con) vs « L ecran reste allume », « minutes d inactivite » (i18n.h:486 y vecinas, `veille`) — la fuente posee el apostrofe. | Uniformizar todas las cadenas FR con apostrofe. **fixed** (las dos cadenas fallidas) | S |
 
-## Constats par écran
+## Constats por pantalla
 
-### Écran principal (`main-0g`, `pesee-donnees-cloud-completes`)
-**Marche bien** : hiérarchie claire (poids énorme à gauche, méta à droite), badge
-d'état coloré, TARE 2/3 + Parametres 1/3 avec de larges cibles (~285×92 et
-143×92 px), icônes WiFi/compte vertes en bandeau.
-**Accroche** : les icônes maison/flèche avec « -- » sont cryptiques avant la
-première pesée (aucune légende ; c'est rack + emplacement, on ne le découvre
-qu'une bobine posée). Le « 0.0 » du bouton TARE (quick win 3). « Retirer
-materiau » comme état terminal est ambigu : il se lit comme une erreur alors
-qu'il signifie « pesée terminée » — préférer « Synchronise — retirez la
-bobine » (voir quick win 2).
+### Pantalla principal (`main-0g`, `pesee-donnees-cloud-completes`)
+**Funciona bien** : jerarquía clara (peso enorme a la izquierda, meta a la derecha), badge de estado colorido, TARE 2/3 + Parámetros 1/3 con grandes objetivos (~285×92 y 143×92 px), iconos WiFi/cuenta verdes en el bandeau.
+**Punto débil** : los iconos casa/flecha con « -- » son cripticos antes de la primera pesada (ninguna leyenda ; es rack + ubicación, lo descubre solo al posar una bobina). El « 0.0 » del botón TARE (quick win 3). « Retirar material » como estado terminal es ambiguo : se lee como un error mientras que significa « pesaje terminado » — preferir « ¡Sincronizar — retire la bobina » (ver quick win 2).
 
-### Réglages (`settings-list-haut`, `settings-list-bas`)
-**Marche bien** : chaque ligne montre sa valeur courante (SSID, compte, 60 %,
-406.00, Francais, v3.1.3, Oui/Non) — la liste répond à la plupart des questions
-sans rien ouvrir. Icônes colorées par état (vert connecté / rouge déconnecté).
-**Accroche** : scroll perdu à chaque retour (quick win 4) ; ligne RFID seule
-sans valeur, chevron flottant (quick win 8) ; « Calibrer : 406.00 » expose un
-facteur interne sans unité — un utilisateur attendrait plutôt la date du dernier
-calibrage ou rien ; rail ▲/▼ ~39 px de large (sous la cible 44 px) et sans état
-désactivé en butée (un tap en fin de liste ne produit aucun feedback).
+### Configuración (`settings-list-haut`, `settings-list-bas`)
+**Funciona bien** : cada línea muestra su valor actual (SSID, cuenta, 60 %, 406.00, Francés, v3.1.3, Sí/No) — la lista responde a la mayoría de las preguntas sin abrir nada. Iconos coloreados por estado (verde conectado / rojo desconectado).
+**Punto débil** : desplazamiento perdido en cada retorno (quick win 4) ; línea RFID sola sin valor, chevron flotante (quick win 8) ; « Calibrar : 406.00 » expone un factor interno sin unidad — un usuario esperaría más bien la fecha del último calibrado o nada ; barra ▲/▼ ~39 px de ancho (debajo del objetivo 44 px) y sin estado desactivado en el borde (un tap al final de la lista produce ningún feedback).
 
 ### WiFi (`wifi-liste-initiale`, `wifi-recherche-spinner`, `wifi-ip-mac`)
-**Marche bien** : spinner « Recherche... » pendant le re-scan (bon état de
-chargement), verrou + barres de signal par réseau, IP/MAC en fin de liste,
-re-scan accessible dans le bandeau.
-**Accroche** : réseau courant non signalé + ordre instable (quick win 6) ;
-annuler depuis le clavier ramène à la liste **Réglages**, pas au picker WiFi —
-pour corriger une erreur de sélection il faut re-rentrer et re-scanner.
+**Funciona bien** : spinner « Búsqueda... » durante el re-scan (buen estado de carga), candado + barras de señal por red, IP/MAC al final de la lista, re-scan accesible en el bandeau.
+**Punto débil** : red actual no señalada + orden inestable (quick win 6) ; cancelar desde el teclado devuelve a la lista **Configuración**, no al selector WiFi — para corregir un error de selección hay que re-ingresar y re-scannear.
 
-### Clavier (`clavier-minuscules-vide` → `clavier-symboles`)
-**Marche bien** : 3 modes complets (min/MAJ/&123), touche de mode active en
-surbrillance bleue, œil afficher/masquer fonctionnel (`clavier-masque`),
-« Valider » explicite dans le bandeau, masquage LVGL avec fenêtre de 900 ms sur
-le dernier caractère (.ino:2727) — comportement standard.
-**Accroche** : deux affordances de validation redondantes (« Valider » bandeau +
-✓ bleu clavier) ; en mode &123, les symboles `<` `>` cohabitent avec les
-chevrons de déplacement du curseur sur la même rangée visuelle — confusion
-possible ; l'annulation (tap bandeau) n'est indiquée nulle part par un libellé.
+### Teclado (`clavier-minuscules-vide` → `clavier-symboles`)
+**Funciona bien** : 3 modos completos (min/MAJ/&123), tecla de modo activa en resaltado azul, ojo mostrar/ocultar funcional (`clavier-masque`), « Validar » explícito en el bandeau, ocultamiento LVGL con ventana de 900 ms sobre el último carácter (.ino:2727) — comportamiento estándar.
+**Punto débil** : dos affordances de validación redundantes (« Validar » bandeau + ✓ azul teclado) ; en modo &123, los símbolos `<` `>` cohabitán con las flechas de desplazamiento del cursor en la misma fila visual — posible confusión ; la cancelación (tap bandeau) no está indicada en ningún lugar por una etiqueta.
 
-### Compte (`compte-deconnexion`)
-Écran presque vide : icône cloud, nom du compte, bouton rouge « Deconnexion ».
-~80 % de l'espace inutilisé alors que l'utilisateur voudrait : e-mail du compte,
-état/heure de la dernière synchro, nombre de bobines. Le seul élément actionnable
-est destructif. Effort M — à traiter avec la maquette d'abord (règle du dépôt).
+### Cuenta (`compte-deconnexion`)
+Pantalla casi vacía : icono nube, nombre de cuenta, botón rojo « Desconexión ». ~80 % del espacio no utilizado mientras que el usuario querría : correo de cuenta, estado/hora de la última sincronización, número de bobinas. El único elemento accionable es destructivo. Esfuerzo M — a tratar con la maqueta primero (regla del repositorio).
 
-### Calibrage (`calibrage-etape1`)
-**Marche bien** : « Calibrage (1/4) » dans le bandeau (progression claire),
-instructions numérotées, facteur actuel affiché, gros bouton SUIVANT.
-**Non testé au-delà de l'étape 1** (consigne). Pas de bouton Annuler explicite —
-le retour bandeau fonctionne mais rien ne l'indique pendant un assistant où
-l'utilisateur craint de « casser » le réglage en cours.
+### Calibrado (`calibrage-etape1`)
+**Funciona bien** : « Calibrado (1/4) » en el bandeau (progresión clara), instrucciones numeradas, factor actual mostrado, botón grande SIGUIENTE.
+**No probado más allá de la etapa 1** (consigna). No hay botón Cancelar explícito — el retorno bandeau funciona pero nada lo indica en un asistente donde el usuario teme « romper » la configuración en curso.
 
 ### RFID / MATERIEL (`rfid-materiel`)
-**Marche bien** : badges LECTEURS 1/2 bleus (détection à l'init), Scanner ⇄
-Arret avec changement de couleur rouge — bon feedback d'activité.
-**Accroche** : quick win 8 (titre, échelle, prérequis TEST). Pendant mon test,
-l'écran affichait **simultanément** LECTEURS 1 et 2 en bleu (« détectés ») et
-« PN532-1/2 no ack » en rouge — deux vérités contradictoires sans explication ;
-l'utilisateur ne peut pas savoir si son matériel est en panne (probable cause :
-plateau non vide, cf. .ino:10561 — jamais dit à l'écran). « Scanner » (mixte) vs
-« TEST » (capitales) : casse incohérente. Le scan n'a pas de timeout visible.
+**Funciona bien** : badges LECTEURS 1/2 azules (detección al iniciar), Scanner ⇄
+Parada con cambio de color rojo — buen feedback de actividad.
+**Punto fuerte** : quick win 8 (título, escala, requisitos TEST). Durante mi prueba,
+la pantalla mostraba **simultáneamente** LECTORES 1 y 2 en azul (« detectados ») y
+« PN532-1/2 no ack » en rojo — dos verdades contradictorias sin explicación ;
+el usuario no puede saber si su material está en fallo (probable causa :
+plato no vacío, cf. .ino:10561 — nunca se muestra en pantalla). « Scanner » (mixto) vs
+« TEST » (mayúsculas) : incoherencia de mayúsculas. El escaneo no tiene timeout visible.
 
-### Mise à jour (`maj-a-jour`)
-Sobre et juste (« v3.1.3 / A jour » en vert), mais : pas de bouton « Vérifier
-maintenant », pas d'horodatage de dernière vérification, écran aux trois quarts
-vide. Install non testé (consigne).
+### Actualización (`maj-a-jour`)
+Sencillo y justo (« v3.1.3 / A día » en verde), pero : no hay botón « Verificar
+ahora », no hay horario de última verificación, pantalla con tres cuartos vacía. Instalación no probada (instrucciones).
 
 ### LAN (`lan-code-acces`)
-**Marche bien** : IP, code, toggle Vue live vert — tout tient sur un écran.
-**Accroche** : quick win 5 (regen sans confirmation) ; l'écran n'explique pas
-*comment utiliser* le code — afficher l'URL complète `http://<ip>/live` rendrait
-la fonction auto-suffisante ; la valeur « Oui » de la ligne LAN dans Réglages
-désigne en fait « Vue live activée » — libellé à préciser.
+**Funciona bien** : IP, código, interruptor Vista en vivo verde — todo cabe en una pantalla.
+**Punto fuerte** : quick win 5 (regeneración sin confirmación) ; la pantalla no explica
+*como usar* el código — mostrar la URL completa `http://<ip>/live` haría que la función sea autosuficiente ; el valor « Sí » de la línea LAN en Ajustes
+designa en realidad « Vista en vivo activada » — etiqueta a precisar.
 
-### Veille (`veille`)
-**Marche bien** : toggle + chips de délai + phrase d'état (« L ecran reste
-allume »).
-**Accroche** : chips 1/2/5/10/15/30 sans unité tant que la veille est coupée
-(l'unité « minutes » n'apparaît que via la phrase d'état une fois activée) ;
-état désactivé des chips peu différencié du normal ; apostrophes (quick win 10).
+### Modo de espera (`veille`)
+**Funciona bien** : interruptor + chips de retardo + frase de estado (« La pantalla permanece
+encendida »).
+**Punto fuerte** : chips 1/2/5/10/15/30 sin unidad mientras la espera está desactivada
+(la unidad « minutos » solo aparece mediante la frase de estado una vez activada) ;
+estado desactivado de las chips poco diferenciado del normal ; acentos (quick win 10).
 
-### Workflow de pesée (opérateur au banc)
-Chronologie mesurée (bobine ~788 g, 2 puces TigerTag) :
-pose → **~4–6 s** badge « Retirer materiau » + logo bobine + « R3D PLA High S »
-(`pesee-tag-detecte-787g`) → **~10 s** CONTENEUR 278 g / FILAMENT 510 g /
-Rack 4 / D7 (`pesee-donnees-cloud-completes`). Retrait → retour « Pret »/0 g
-immédiat et propre (`pesee-retrait-retour-pret`). Re-pose : données complètes
-dès la première capture (cache métadonnées efficace,
-`pesee-repose-cache-instantane`). Retrait prématuré (~2 s après bip) : abandon
-propre sans état bloqué, mais silencieux (quick win 2).
-**Trous de feedback** : pendant les 4–6 premières secondes le badge reste
-« Pret » (l'utilisateur ne sait pas si la lecture est en cours) ; entre
-détection et données cloud, CONTENEUR/FILAMENT restent « -- » sans indicateur
-d'activité ; le bip n'est pas un signal fiable (0, 1 ou 2 bips selon le lecteur
-qui accroche, twin-UID récupéré côté cloud — confirmé opérateur) donc l'écran
-est le seul canal de confirmation, ce qui renforce le quick win 2. Noté aussi :
-la live view a affiché « reconnecting » pendant la requête cloud (cœur occupé) —
-sans impact panel, mais symptôme de charge à ce moment-là.
+### Flujo de pesaje (operador en el banco)
+Secuencia medida (bobina ~788 g, 2 etiquetas TigerTag) :
+colocación → **~4–6 s** badge « Retirar material » + logo bobina + « R3D PLA High S »
+(`pesee-tag-detecte-787g`) → **~10 s** CONTENEDOR 278 g / FILAMENTO 510 g /
+Rack 4 / D7 (`pesee-donnees-cloud-completes`). Retiro → retorno « Listo »/0 g
+inmediato y limpio (`pesee-retrait-retour-pret`). Re-colocación : datos completos
+desde la primera captura (cache de metadatos eficaz,
+`pesee-repose-cache-instantane`). Retiro prematuro (~2 s después del bip) : abandono
+limpio sin estado bloqueado, pero silencioso (quick win 2).
+**Fallas de feedback** : durante las 4–6 primeras segundos el badge permanece
+« Listo » (el usuario no sabe si la lectura está en curso) ; entre
+detección y datos en la nube, CONTENEDOR/FILAMENTO permanecen « -- » sin indicador
+de actividad ; el bip no es una señal fiable (0, 1 o 2 bips según el lector
+que detecta, twin-UID recuperado en la nube — confirmado por el operador) por lo que la pantalla
+es el único canal de confirmación, lo que refuerza el quick win 2. Notado también :
+la vista en vivo mostró « reconectando » durante la solicitud en la nube (corazón ocupado) —
+sin impacto en el panel, pero síntoma de carga en ese momento.
 
-## Incohérences code/UI relevées en passant
+## Incoherencias de código/UI detectadas al pasar
 
-- `TigerTagSplashESP32.ino:3717` — « Son: » littéral, seul libellé non-i18n de
-  l'écran Volume (visible en mode EN).
-- `TigerTagSplashESP32.ino:12690` — valeur « 0.0 » du bouton TARE créée une fois,
-  jamais rafraîchie (pointeur local, aucun update ailleurs).
-- `TigerTagSplashESP32.ino:5794` vs `:4130` — ligne « RFID » (littéral) ouvre un
-  écran titré `t(I18N_HARDWARE)` = « MATERIEL ».
-- `TigerTagSplashESP32.ino:12827–12828` — `substring(0,10)` sur marque et
-  matière : troncature sans ellipse (« PLA High S »).
-- `TigerTagSplashESP32.ino:4642, 4685–4690` — régénération du code LAN : bouton
-  38×38, action immédiate sans confirmation, dans une boucle bloquante où
-  `lvglAskYesNo` serait pourtant utilisable.
-- `TigerTagSplashESP32.ino:12760–12767` — états WEIGHING/SENDING/SYNCED définis
-  mais fenêtre d'affichage trop courte pour être vue (badge observé : Pret →
-  Retirer materiau).
-- `TigerTagSplashESP32.ino:10561` — le prérequis « plateau vide » du self-test
-  RF n'existe qu'en commentaire ; à l'écran, badges « détectés » et « no ack »
-  coexistent sans explication.
-- `i18n.h:486` (et chaîne SLEEP_MINUTES voisine) — apostrophes remplacées par
-  des espaces, alors que `LAN_CODE` (« Code d'acces ») prouve que la police les
-  rend.
-- Cause racine des accents absents partout : polices LVGL built-in Montserrat
-  (ASCII seul, `.ino:629–631`). Le pipeline de sous-ensembles existe déjà pour
-  le CJK (`scripts/make-cjk-font.sh`) — le même mécanisme peut produire un
-  Montserrat Latin-1 et rendre « Paramètres », « Déconnexion », « À jour »,
-  « Français », « Español », « Português » corrects dans 6 des 8 langues.
-  Effort M (flash + vérif `check-i18n`), compatible LVGL v8.
+- `TigerTagSplashESP32.ino:3717` — « Son: » literal, único etiquetado no-i18n de
+  la pantalla Volumen (visible en modo EN).
+- `TigerTagSplashESP32.ino:12690` — valor « 0.0 » del botón TARE se crea una vez,
+  nunca se refresca (puntero local, ningún update en otro lugar).
+- `TigerTagSplashESP32.ino:5794` vs `:4130` — línea « RFID » (literal) abre un
+  pantalla titulada `t(I18N_HARDWARE)` = « MATERIEL ».
+- `TigerTagSplashESP32.ino:12827–12828` — `substring(0,10)` sobre marca y
+  materia : truncamiento sin elipsis (« PLA High S »).
+- `TigerTagSplashESP32.ino:4642, 4685–4690` — regeneración del código LAN : botón
+  38×38, acción inmediata sin confirmación, en un bucle bloqueante donde
+  `lvglAskYesNo` sería sin embargo utilizable.
+- `TigerTagSplashESP32.ino:12760–12767` — estados WEIGHING/SENDING/SYNCED definidos
+  pero ventana de visualización demasiado corta para ser vista (badge observado : Listo →
+  Retirar material).
+- `TigerTagSplashESP32.ino:10561` — el requisito « plato vacío » del self-test
+  RF existe solo en comentario ; en pantalla, badges « detectados » y « no ack »
+  coexisten sin explicación.
+- `i18n.h:486` (y cadena SLEEP_MINUTES vecina) — acentos reemplazados por
+  espacios, mientras que `LAN_CODE` (« Código de acceso ») prueba que la fuente los renderiza.
+- Causa raíz de los acentos ausentes en todas partes : fuentes LVGL integradas Montserrat
+  (ASCII solo, `.ino:629–631`). El pipeline de subconjuntos existe ya para el CJK (`scripts/make-cjk-font.sh`) —
+  el mismo mecanismo puede producir un Montserrat Latin-1 y hacer que « Parámetros », « Desconexión », « A día », « Francés », « Español », « Português »
+  sean correctos en 6 de 8 idiomas.
+  Esfuerzo M (flash + verificación `check-i18n`), compatible LVGL v8.
 
-## Ce qui n'a pas pu être testé, et pourquoi
+## Lo que no pudo ser probado, y por qué
 
-- **Glissés** : le protocole live view ne transmet que des taps — ressenti du
-  scroll au doigt, drag éventuel de la jauge Volume, inertie des listes : non
-  évalués. Les doubles taps rapides (< ~600 ms) sont perdus via la live view
-  (injection tenue 2 lectures/30 ms, `.ino:2277–2289`) ; les frappes rapides au
-  clavier sont donc à re-vérifier au doigt avant de conclure à un défaut.
-- **Audio** : bips inaudibles à distance ; comportement décrit par l'opérateur
-  (0–2 bips non déterministes selon les lecteurs).
-- **Veille réelle** : non activée (réglage persistant, appareil de banc).
-- **Interdits respectés** : pas de validation WiFi, pas d'Install OTA, pas de
-  Logout, pas de régénération du code LAN, calibrage arrêté à l'étape 1.
-- **Gauche/droite RFID** : non discriminable — la bobine porte 2 puces et le
-  premier lecteur qui accroche gagne.
-- **Transitoire du retrait prématuré** : ma session live view s'est déconnectée
-  à cet instant ; état final vérifié (retour « Pret » propre), transition décrite
-  par l'opérateur (effacement dès que le poids approche 0, aucun message).
-- **Artefacts visuels notés mais imputables à la live view** (bandes mélangées
-  pendant les animations de scroll, ex. `settings-scroll-artefact-bandes`) : le
-  panel physique n'est probablement pas concerné — à confirmer d'un coup d'œil
-  au banc.
-- **Multi-viewers / 503** : non provoqué volontairement.
+- **Omitidos** : el protocolo de vista en vivo solo transmite taps — sensación del
+  scroll con el dedo, arrastre posible de la escala de Volumen, inercia de las listas : no evaluados. Los dobles taps rápidos (< ~600 ms) se pierden a través de la vista en vivo
+  (inyección mantenida 2 lecturas/30 ms, `.ino:2277–2289`) ; los golpes rápidos en el teclado son por tanto a re-verificar con el dedo antes de concluir sobre un defecto.
+- **Audio** : bips inaudibles a distancia ; comportamiento descrito por el operador
+  (0–2 bips no deterministas según los lectores).
+- **Modo de espera real** : no activado (ajuste persistente, dispositivo de banco).
+- **Límites respetados** : no hay validación WiFi, no hay Instalación OTA, no hay Logout, no hay regeneración del código LAN, calibrado detenido en la etapa 1.
+- **RFID izquierda/derecha** : no discriminable — la bobina lleva 2 etiquetas y el primer lector que detecta gana.
+- **Transitorio del retiro prematuro** : mi sesión de vista en vivo se desconectó en ese momento ; estado final verificado (retorno « Listo » limpio), transición descrita por el operador (borrado tan pronto el peso se acerque a 0, ningún mensaje).
+- **Artefactos visuales notados pero atribuibles a la vista en vivo** (bandas mezcladas
+  durante las animaciones de scroll, ex. `settings-scroll-artefact-bandes`) : el
+  panel físico probablemente no está afectado — a confirmar con una mirada al banco.
+- **Multi-viewers / 503** : no provocado voluntariamente.

@@ -54,7 +54,7 @@ La caja imprimible, la lista completa de componentes, los pines y el cableado es
 3. Selecciona la variante exacta de placa y sigue los pasos que muestra el instalador.
 4. Enciende la báscula, elige el idioma y calibra la célula de carga antes de pesar bobinas.
 
-También puedes compilar desde el código con PlatformIO. La guía completa está en [docs/INSTALLATION.md](docs/INSTALLATION.md); la versión española se encuentra en [docs/INSTALACION_ES.md](docs/INSTALACION_ES.md).
+También puedes compilar desde el código con PlatformIO. La guía completa en español está en [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ## Simulación en ESP32 Simulador
 
@@ -74,15 +74,55 @@ La maqueta reproduce una pantalla rectangular de 480 × 320 y permite cambiar de
 
 ## Documentación
 
-- [Guía de instalación en español](docs/INSTALACION_ES.md)
-- [Materiales, pines y montaje](docs/HARDWARE.md)
-- [Instalación original en inglés](docs/INSTALLATION.md)
-- [Sincronización y privacidad](docs/CLOUD.md)
-- [API local](docs/API.md)
-- [Campos de telemetría](docs/TELEMETRY.md)
-- [Resolución de problemas](docs/TROUBLESHOOTING.md)
-- [Mapa del código](CODEMAP.md)
-- [Notas de cambios](WHATSNEW.md)
+- [Guía de instalación](docs/INSTALACION_ES.md)
+- [Puerto serie y controladores](docs/PUERTO-SERIE_ES.md)
+- [Resolución de problemas](docs/RESOLUCION-PROBLEMAS_ES.md)
+- [Hardware, pines y montaje](docs/HARDWARE.md)
+- [Sincronización en la nube y privacidad](docs/CLOUD.md)
+- [Referencia completa de la API](docs/API.md)
+- [Telemetría y datos enviados a la nube](docs/TELEMETRY.md)
+- [Firmware y arquitectura](docs/FIRMWARE.md)
+- [Vincular una cuenta TigerTag](docs/ACCOUNT-PAIRING.md)
+- [Guía para MakerWorld](docs/MAKERWORLD.md)
+- [Rendimiento RFID](docs/RFID-PERFORMANCE.md)
+- [Informe sobre USB Host y NFC](docs/USB_HOST_POSTMORTEM.md)
+- [Historial de revisiones](docs/reviews/README.md)
+- [Criterios para las revisiones técnicas](docs/REVIEW-BRIEF.md)
+- [Novedades](WHATSNEW.md)
+- [Registro de cambios](CHANGELOG.md)
+- [Contribuir al proyecto](CONTRIBUTING.md)
+- [Política de seguridad](SECURITY.md)
+- [Código de conducta](CODE_OF_CONDUCT.md)
+- [Marcas y uso del nombre](TRADEMARK_ES.md)
+- [Licencias de terceros](THIRD_PARTY_LICENSES_ES.md)
+- [Guía de agentes de código](AGENTS_ES.md)
+- [Guía de Claude Code](CLAUDE_ES.md)
+- [Mapa detallado del repositorio](CODEMAP_ES.md)
+- [Registro de trabajo](WORKLOG_ES.md)
+- [Notas de versión v3.13.0](docs/release-notes/v3.13.0.md)
+- [Notas de versión v3.12.0](docs/release-notes/v3.12.0.md)
+- [Notas de versión v3.11.0](docs/release-notes/v3.11.0.md)
+- [Notas de versión v3.10.0](docs/release-notes/v3.10.0.md)
+- [Notas de versión v3.9.0](docs/release-notes/v3.9.0.md)
+- [Notas de versión v3.8.1](docs/release-notes/v3.8.1.md)
+- [Notas de versión v3.8.0](docs/release-notes/v3.8.0.md)
+- [Notas de versión v3.7.6](docs/release-notes/v3.7.6.md)
+- [Notas de versión v3.7.5](docs/release-notes/v3.7.5.md)
+- [Notas de versión v3.7.4](docs/release-notes/v3.7.4.md)
+- [Notas de versión v3.7.3](docs/release-notes/v3.7.3.md)
+- [Notas de versión v3.7.2](docs/release-notes/v3.7.2.md)
+- [Notas de versión v3.7.1](docs/release-notes/v3.7.1.md)
+- [Notas de versión v3.7.0](docs/release-notes/v3.7.0.md)
+- [Notas de versión v3.6.0](docs/release-notes/v3.6.0.md)
+- [Notas de versión v3.5.0](docs/release-notes/v3.5.0.md)
+- [Notas de versión v3.4.0](docs/release-notes/v3.4.0.md)
+- [Notas de versión v3.3.0](docs/release-notes/v3.3.0.md)
+- [Notas de versión v3.2.0](docs/release-notes/v3.2.0.md)
+- [Notas de versión v3.1.3](docs/release-notes/v3.1.3.md)
+- [Notas de versión v3.1.2](docs/release-notes/v3.1.2.md)
+- [Notas de versión v3.1.1](docs/release-notes/v3.1.1.md)
+- [Notas de versión v3.1.0](docs/release-notes/v3.1.0.md)
+- [Notas de versión v3.0.0](docs/release-notes/v3.0.0.md)
 - [README original en inglés](README.en.md)
 
 ## Compilar y verificar
@@ -93,6 +133,6 @@ La simulación del PC solo valida la maqueta y la navegación. No confirma el fu
 
 ## Licencia y créditos
 
-El firmware se distribuye bajo la licencia MIT. Consulta [LICENSE](LICENSE), [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) y [TRADEMARK.md](TRADEMARK.md) para conocer las licencias y marcas de terceros. Se conservan los créditos y avisos del proyecto original.
+El firmware se distribuye bajo la licencia MIT. Consulta [LICENSE](LICENSE), la [guía de licencias de terceros](THIRD_PARTY_LICENSES_ES.md) y la [guía de marcas](TRADEMARK_ES.md). Se conservan intactos los avisos legales originales.
 
-Para colaborar, consulta [CONTRIBUTING.md](CONTRIBUTING.md). Este fork mantiene el código original y añade la selección inicial en español y el perfil independiente de simulación.
+Para colaborar, consulta [CONTRIBUTING.md](CONTRIBUTING.md) y el [código de conducta](CODE_OF_CONDUCT.md). Este fork mantiene el código original y añade la selección inicial en español y el perfil independiente de simulación.

@@ -1,114 +1,79 @@
-# Cloud sync and privacy
+# Sincronización en la nube y privacidad
 
-What the scale sends, where it goes, and what is stored on the device. Written so
-that anyone can decide whether they want the cloud features on — the firmware is
-fully usable without them.
+Lo que envía la báscula, adónde va, y qué se almacena en el dispositivo. Escrito de forma que cualquiera pueda decidir si quiere las características de la nube — el firmware es completamente utilizable sin ellas.
 
-## The scale works offline
+## La báscula funciona sin conexión
 
-Cloud sync is optional. Without signing in, the scale still weighs, still reads
-TigerTag tags, still identifies brand and material (from a database cached in its
-own flash), and still serves its web UI on your LAN. What you lose is inventory
-sync across devices.
+La sincronización en la nube es opcional. Sin iniciar sesión, la báscula sigue pesando, sigue leyendo etiquetas TigerTag, sigue identificando marca y material (desde una base de datos caché en su propio flash) y sigue sirviendo su interfaz web en tu LAN. Lo que pierdes es la sincronización de inventario entre dispositivos.
 
-The brand and material lookups are **local by design**: `data/id_brand.json` and
-`data/id_material.json` are stored in the device's filesystem, so identifying a
-tag needs no network round-trip and works with the internet down. They are
-refreshed from the public
+Las búsquedas de marca y material están diseñadas **localmente**: `data/id_brand.json` y `data/id_material.json` están almacenados en el sistema de archivos del dispositivo, por lo que identificar una etiqueta no requiere un viaje de red y funciona incluso sin conexión a internet. Se refrescan desde el repositorio público
 [TigerTag-RFID-Guide](https://github.com/TigerTag-Project/TigerTag-RFID-Guide)
-repository at most once every 24 h.
+máximo una vez cada 24 h.
 
-## Signing in
+## Iniciar sesión
 
-Authentication goes through Firebase Auth for the `tigertag-connect` project.
-Email/password and Google sign-in are both supported, from the touchscreen or the
-web UI.
+La autenticación pasa por Firebase Auth para el proyecto `tigertag-connect`. Se admiten tanto el inicio de sesión con correo/contraseña como con Google, desde la pantalla táctil o la interfaz web.
 
-**What the device stores in its own NVS flash:** a Firebase refresh token, the
-user ID, and the WiFi credentials. A refresh token is sufficient to obtain new
-access tokens, so treat a provisioned device as holding a credential —
-`Settings → Cloud → Sign out` clears it (the same thing the
-`POST /api/firebase/logout` endpoint does).
+**Lo que almacena el dispositivo en su propio flash NVS:** un token de refresco de Firebase, el ID de usuario y las credenciales de WiFi. Un token de refresco es suficiente para obtener nuevos tokens de acceso, por lo que trata a un dispositivo configurado como poseedor de una credencial — `Configuración → Nube → Cerrar sesión` lo borra (lo mismo que hace el endpoint
+`POST /api/firebase/logout`).
 
-**What it never stores:** your account password. Sign-in exchanges it for tokens
-and it is not written to flash.
+**Lo que nunca almacena:** la contraseña de tu cuenta. El inicio de sesión la intercambia por tokens y no se escribe en el flash.
 
-### About the API key in the source
+### Acerca de la clave de API en el código fuente
 
-`TIGERTAG_FIREBASE_WEB_API_KEY` in §1 is a hardcoded string, and that is correct,
-not an oversight. A Firebase *Web API key* is a public project identifier that
-every Firebase client application ships — the same value is served publicly by
-Firebase Hosting at `/__/firebase/init.json`. It identifies the project; it does
-not authorise anything on its own. Access control is enforced by Firebase
-Security Rules against the signed-in user.
+`TIGERTAG_FIREBASE_WEB_API_KEY` en §1 es una cadena codificada en el código, y eso es correcto, no un error. Una clave de API *Web de Firebase* es un identificador público del proyecto que cada aplicación cliente de Firebase incluye — el mismo valor se sirve públicamente por Firebase Hosting en `/__/firebase/init.json`. Identifica el proyecto; no autoriza nada por sí sola. El control de acceso se enfoque mediante las Reglas de seguridad de Firebase contra el usuario conectado.
 
-## What gets sent
+## Lo que se envía
 
-On each completed weighing, and on a periodic heartbeat, the device writes to
-Firestore under `users/{uid}/scales/{mac}`:
+En cada pesaje completado, y en un latido periódico, el dispositivo escribe en Firestore bajo `users/{uid}/scales/{mac}`:
 
-| Field | Why |
-|-------|-----|
-| Tag UIDs of the spool on the platform | identifies which spool this is |
-| Net weight, gross weight, container weight | the actual measurement |
-| Firmware version | so the app can tell you an update exists |
-| WiFi signal strength, IP address | diagnostics shown in the app |
-| Calibration factor | so a replacement device can be restored |
-| Last-heartbeat timestamp | online/offline indicator |
-| Battery level, charge state, power source | shown in the app; null when no battery is fitted |
-| Screen state | so standby is not mistaken for a scale that went offline |
+| Campo | ¿Por qué? |
+|-------|----------|
+| UID de las etiquetas de la bobina en la plataforma | identifica cuál bobina es esta |
+| Peso neto, peso bruto, peso del contenedor | la medición real |
+| Versión del firmware | para que la aplicación te avise de una actualización |
+| Fuerza del señal WiFi, dirección IP | diagnósticos mostrados en la aplicación |
+| Factor de calibración | para que un dispositivo reemplazado pueda restaurarse |
+| Marca de tiempo del último latido | indicador en línea/fuera de línea |
+| Nivel de batería, estado de carga, fuente de alimentación | mostrado en la aplicación; nulo cuando no hay batería instalada |
+| Estado de la pantalla | para que el modo stand-by no se confunda con una báscula que se haya desconectado |
 
-The heartbeat sends only fields that changed since the last one, with a full
-snapshot on connect and periodically after that. Every field, its exact type and
-what each value means: **[docs/TELEMETRY.md](TELEMETRY.md)** — the reference for
-anything reading a scale rather than owning one.
+El latido envía solo los campos que han cambiado desde el último, con una instantánea completa al conectar y periódicamente después. Cada campo, su tipo exacto y qué significa cada valor: **[docs/TELEMETRY.md](TELEMETRY_ES.md)** — la referencia para cualquier cosa que lea una báscula en lugar de poseerla.
 
-Timestamps are set by the server, not the device — the ESP32 has no battery-backed
-clock and needs no NTP for this.
+Las marcas de tiempo se establecen en el servidor, no en el dispositivo — el ESP32 no tiene un reloj con batería y no necesita NTP para esto.
 
-## Remote commands
+## Comandos remotos
 
-The device polls a Firestore command queue under
-`users/{uid}/scales/{mac}/commands/`, which is how the app can trigger a remote
-tare, a restart, a factory reset or an OTA update. Each command's status and
-progress are written back so the app can show them.
+El dispositivo consulta una cola de comandos en Firestore bajo
+`users/{uid}/scales/{mac}/commands/`, que es cómo la aplicación puede desencadenar un tare remoto, un reinicio, una reinicialización de fábrica o una actualización OTA. El estado y progreso de cada comando se escriben de vuelta para que la aplicación los muestre.
 
-Commands are read from **your own** user document, so this is not a channel anyone
-else can reach.
+Los comandos se leen desde **tu propio** documento de usuario, por lo que esto no es un canal que nadie más pueda alcanzar.
 
-## The local API
+## La API local
 
-The device also exposes an HTTP API on your LAN — this is what its own web UI
-uses. Notably it is **unauthenticated**, which is a deliberate simplification for
-a device on a home network, but worth knowing:
+El dispositivo también expone una API HTTP en tu LAN — esta es lo que su propia interfaz web utiliza. Notablemente es **no autenticada**, lo cual es una simplificación deliberada para un dispositivo en una red doméstica, pero vale la pena saber:
 
-- Anyone on your network can read the scale's state and trigger a tare.
-- `GET /api/logs` returns the last ~80 log lines.
-- `POST /api/firebase/logout` clears the stored session.
-- `POST /api/reset-wifi` clears the stored WiFi credentials.
+- Cualquiera en tu red puede leer el estado de la báscula y desencadenar un tare.
+- `GET /api/logs` devuelve las últimas ~80 líneas de registro.
+- `POST /api/firebase/logout` borra la sesión almacenada.
+- `POST /api/reset-wifi` borra las credenciales de WiFi almacenadas.
 
-If your network is one you do not fully trust, put the device on a guest VLAN.
+Si tu red no la confías completamente, coloca el dispositivo en una VLAN de invitados.
 
-## Handing a device to someone else
+## Entregar un dispositivo a alguien más
 
-Before passing a unit on, clear both stored credentials:
+Antes de pasar un dispositivo, limpia ambas credenciales almacenadas:
 
-- **Settings → Cloud → Sign out** (or `POST /api/firebase/logout`)
-- **Settings → WiFi → Forget** (or `POST /api/reset-wifi`)
+- **Configuración → Nube → Cerrar sesión** (o `POST /api/firebase/logout`)
+- **Configuración → WiFi → Olvidar** (o `POST /api/reset-wifi`)
 
-Or wipe everything, including calibration, with
+O borra todo, incluida la calibración, con
 `bash scripts/flash.sh --erase`.
 
-A plain reflash does **not** clear these — NVS is preserved on purpose so that
-firmware updates do not cost you your setup.
+Un reflejo simple no borra estos datos — el NVS se preserva intencionalmente para que las actualizaciones de firmware no te cuesten tu configuración.
 
-## Running against your own Firebase project
+## Ejecutar contra tu propio proyecto Firebase
 
-The Firebase project ID and API key are compile-time constants in §1, and the
-Firestore document paths are built in §11. Pointing the firmware at a different
-project means changing those constants and recreating the same document structure
-plus matching security rules.
+El ID del proyecto Firebase y la clave de API son constantes en tiempo de compilación en §1, y las rutas de documentos Firestore se construyen en §11. Apuntar el firmware a un proyecto diferente significa cambiar esas constantes y recrear la misma estructura de documento más las reglas de seguridad coincidentes.
 
-This is not a documented, supported path today — nobody has done it — so if you
-try it, expect to read §11 rather than follow a recipe. A pull request adding a
-verified guide would be very welcome.
+Esto no es una ruta documentada, soportada hoy — nadie lo ha hecho — por lo que si lo intentas, espera leer §11 en lugar de seguir una receta. Una solicitud de pull añadiendo una guía verificada sería muy bienvenida.

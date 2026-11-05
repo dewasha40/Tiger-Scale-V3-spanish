@@ -1,79 +1,79 @@
-# Getting the COM port to show up to flash the TigerScale V3
+# Obtener el puerto COM para que aparezca para flashar el TigerScale V3
 
-The TigerScale V3 uses an **ESP32-S3** chip. To flash the firmware, your computer needs to see the board as a **COM port / serial port**.
+El TigerScale V3 utiliza una **placa ESP32-S3**. Para flashar el firmware, tu computadora necesita ver la placa como un **puerto COM / puerto serie**.
 
-On most recent computers this port shows up **on its own** when you plug the board in.
-If no port appears in the flasher, a small driver is missing: follow the section for your system below.
+En la mayoría de las computadoras recientes, este puerto aparece **por sí solo** cuando conectas la placa.
+Si no aparece ningún puerto en el flasher, falta un pequeño controlador: sigue la sección para tu sistema a continuación.
 
-> **Before you start**
-> - Use a real **USB data cable** (some cables only charge and carry no data).
-
----
-
-## macOS — nothing to install
-
-No driver needed.
-Plug in the board, open the flasher, and the board shows up directly in the list. Select it and start the flash.
-
-If it doesn't appear: swap the USB cable and try again.
+> **Antes de comenzar**
+> - Utiliza un **cable USB de datos** real (algunos cables solo cargan y no transmiten datos).
 
 ---
 
-## Windows — install the driver (if no COM port appears)
+## macOS — nada que instalar
 
-If the flasher shows no port, the Espressif USB driver is missing. Here is how
-to install it, step by step:
+No se necesita controlador.
+Conecta la placa, abre el flasher y la placa aparece directamente en la lista. Selecciona y comienza el flash.
 
-1. **Download the tool** — click this link, it downloads `idf-env.exe` straight
-   from Espressif's own server (by default it lands in your **Downloads**
-   folder):
-   **[https://dl.espressif.com/dl/idf-env/idf-env.exe](https://dl.espressif.com/dl/idf-env/idf-env.exe)**
-2. **Open PowerShell as administrator** — click the **Start** menu, type
-   `powershell`, right-click **Windows PowerShell** and choose **Run as
-   administrator**.
-3. **Copy this single line, paste it into PowerShell, then press Enter:**
+Si no aparece: cambia el cable USB y prueba de nuevo.
+
+---
+
+## Windows — instala el controlador (si no aparece el puerto COM)
+
+Si el flasher no muestra ningún puerto, el controlador USB de Espressif está faltando. Aquí está cómo
+instalarlo, paso a paso:
+
+1. **Descarga la herramienta** — haz clic en este enlace, descarga `idf-env.exe` directamente
+   desde el servidor propio de Espressif (por defecto, se guarda en tu carpeta **Descargas**
+   ):
+   **[https://dl.espressif.com/dl/idf-env/idf-exe](https://dl.espressif.com/dl/idf-env/idf-env.exe)**
+2. **Abre PowerShell como administrador** — haz clic en el menú **Iniciar**, escribe
+   `powershell`, haz clic derecho en **Windows PowerShell** y elige **Ejecutar como
+   administrador**.
+3. **Copia esta línea única, pégala en PowerShell y presiona Enter:**
 
    ```powershell
    cd $env:USERPROFILE\Downloads; .\idf-env.exe driver install --espressif
    ```
 
-   > Saved the file somewhere other than Downloads? Replace only
-   > `$env:USERPROFILE\Downloads` with that folder — for example
-   > `C:\Users\yourname\Desktop`. The rest of the line stays the same.
+   > Si guardaste el archivo en otro lugar que no sea Descargas, reemplaza solo
+   > `$env:USERPROFILE\Downloads` con esa carpeta — por ejemplo
+   > `C:\Users\tuusuario\Escritorio`. El resto de la línea permanece igual.
 
-4. Wait for it to finish (a few seconds).
-5. **Unplug and plug the board back in.**
-6. Reopen the flasher: the port (e.g. `USB JTAG/serial debug unit (COM3)`) should now appear.
+4. Espera a que termine (unos segundos).
+5. **Desconecta y vuelve a conectar la placa.**
+6. Vuelve a abrir el flasher: el puerto (por ejemplo, `USB JTAG/serial debug unit (COM3)`) debería aparecer ahora.
 
-> Downloading the tool yourself, rather than pasting a one-line command that
-> fetches and runs an executable with administrator rights, means you can see
-> what you are about to run and where it came from. It is one extra click.
+> Descargar la herramienta tú mismo, en lugar de pegar un comando de una línea que
+> descarga y ejecuta un ejecutable con derechos de administrador, significa que puedes ver
+> lo que estás a punto de ejecutar y de dónde proviene. Es un clic adicional.
 
-✓ Select this port and start the flash.
+✓ Selecciona este puerto y comienza el flash.
 
 ---
 
-## Linux — grant access to the serial port
+## Linux — otorga acceso al puerto serie
 
-The port usually shows up on its own (`/dev/ttyACM0`), but your user needs permission to access it.
+El puerto suele aparecer por sí solo (`/dev/ttyACM0`), pero tu usuario necesita permisos para acceder a él.
 
-1. Open a **terminal**.
-2. Add yourself to the group that manages serial ports:
+1. Abre un **terminal**.
+2. Añade tu usuario al grupo que gestiona los puertos serie:
 
    ```bash
    sudo usermod -aG dialout $USER
    ```
 
-3. **Log out and log back in** (or reboot) for it to take effect.
-4. Plug the board back in and reopen the flasher.
+3. **Cierra la sesión y vuelve a iniciarla** (o reinicia) para que surta efecto.
+4. Vuelve a conectar la placa y abre nuevamente el flasher.
 
-> Tip: if you use the flasher **in a browser** (Web Serial), use **Google Chrome** or **Microsoft Edge**; Firefox does not support this feature.
+> Consejo: si usas el flasher **en un navegador** (Web Serial), utiliza **Google Chrome** o **Microsoft Edge**; Firefox no soporta esta función.
 
 ---
 
-## Still not working
+## Aún no funciona
 
-- **Swap the USB cable** (problem #1: a "charge-only" cable).
-- Try **another USB port** on the computer (preferably a direct port, not a hub).
-- On Windows, open **Device Manager**: if you see a device with a yellow exclamation mark, the driver is missing → redo the Windows section above.
-- To force flash mode: hold the **BOOT** button, press **RESET** once, then release **BOOT**, and try again.
+- **Cambia el cable USB** (problema #1: un cable de carga solo).
+- Intenta **otro puerto USB** en la computadora (preferiblemente un puerto directo, no un hub).
+- En Windows, abre **Administrador de dispositivos**: si ves un dispositivo con un signo de exclamación amarillo, el controlador está faltando → vuelve a hacer la sección de Windows anterior.
+- Para forzar el modo de flash: mantén presionado el botón **BOOT**, presiona **RESET** una vez, luego suelta **BOOT** y prueba de nuevo.

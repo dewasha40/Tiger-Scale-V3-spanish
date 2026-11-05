@@ -1,27 +1,20 @@
-# Contributing to TigerScale V3
+# Contribuir a TigerScale V3
 
-Contributions are genuinely welcome, and a few areas would help a lot right now:
+Las contribuciones son sinceramente bienvenidas, y algunos ámbitos necesitarían mucho apoyo en este momento:
 
-- **A V3 enclosure.** There isn't one published yet.
-- **Bench-verifying the SPI and I²C wiring.** Both compile; only HSU has been
-  confirmed end-to-end on hardware. If you wire one up and it works — or doesn't —
-  that report is valuable either way.
-- **Translations.** 11 firmware languages, 9 in the web UI.
-- **Per-transport OTA channels.** Today OTA publishes one binary and a
-  differently-wired unit that takes it loses its reader.
+- **Un encabezado V3.** No se ha publicado aún.
+- **Verificación en bancada de la conexión SPI y I²C.** Ambas compilan; solo HSU ha sido confirmada de forma end-to-end en hardware. Si conectas una y funciona — o no —, el informe es valioso en cualquier caso.
+- **Traducciones.** 11 idiomas del firmware, 9 en la interfaz web.
+- **Canales OTA por transporte.** Hoy en día OTA publica un solo binario y una unidad con conexión diferente que lo toma pierde su lector.
 
-## Before you start
+## Antes de comenzar
 
-Two documents will save you the most time:
+Dos documentos ahorrarán más tiempo:
 
-- **[CODEMAP.md](CODEMAP.md)** — the firmware is one ~16 500-line file. This maps
-  every section and function so you can go straight to the part you need. Its
-  **Landmines** table lists functions with non-obvious constraints; read the row
-  for anything you're about to touch.
-- **[docs/FIRMWARE.md](docs/FIRMWARE.md)** — how the pieces fit together, and the
-  LVGL v8 traps that have each cost a hardware round-trip.
+- **[CODEMAP.md](CODEMAP_ES.md)** — el firmware es un archivo de ~16 500 líneas. Este mapea cada sección y función para que puedas ir directamente a la parte que necesitas. Su tabla **Landmines** lista funciones con restricciones no obvias; lee la fila para cualquier cosa que vayas a tocar.
+- **[docs/FIRMWARE.md](docs/FIRMWARE_ES.md)** — cómo se integran las piezas, y las trampas de LVGL v8 que cada una ha costado un viaje de hardware.
 
-## Setting up
+## Configuración
 
 ```bash
 git clone https://github.com/TigerTag-Project/Tiger-Scale-V3.git
@@ -29,33 +22,25 @@ cd Tiger-Scale-V3
 pio run -e esp32s3_hsu_b   # ~3 minutes on a first build
 ```
 
-You need [PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/).
-The Arduino IDE cannot build this project.
+Necesitas [PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/).
+La IDE Arduino no puede compilar este proyecto.
 
-You do **not** need hardware to contribute. Plenty of useful work — docs,
-translations, tooling, review — needs nothing but a compiler. Just say in your
-pull request what you were able to test.
+No necesitas hardware para contribuir. Mucha labor útil — documentación, traducciones, herramientas, revisión — necesita solo un compilador. Solo indica en tu pull request qué pudiste probar.
 
-## Working in the firmware
+## Trabajar en el firmware
 
-The file is large, so the workflow matters:
+El archivo es grande, así que el flujo de trabajo importa:
 
-1. Find your target in `CODEMAP.md`.
+1. Encuentra tu objetivo en `CODEMAP.md`.
 2. `grep -n "theName" TigerTagSplashESP32/TigerTagSplashESP32.ino`
-3. Read that region, not the whole file.
-4. Make the smallest edit that does the job.
+3. Lee esa región, no todo el archivo.
+4. Haz el cambio mínimo que haga la tarea.
 
-Match the surrounding code's naming, comment density and idiom. Please don't
-reformat code you aren't otherwise changing — it makes the actual change
-impossible to review.
+Alinea el nombre, densidad de comentarios y estilo del código circundante. Por favor, no reformates código que no estés cambiando — hace imposible revisar el cambio real.
 
-**Keep comments true.** A comment that contradicts the code is worse than no
-comment, and this codebase has been bitten by it more than once: a transport
-comment claimed the I²C reader used one bus when the code used another, and the
-LVGL section still described itself as an experimental test screen long after it
-had become the production UI. Both misled real debugging sessions.
+**Mantén los comentarios verdaderos.** Un comentario que contradiga el código es peor que ninguno, y este códigobase lo ha sufrido más de una vez: un comentario de transporte afirmaba que el lector I²C usaba un bus cuando el código usaba otro, y la sección LVGL aún describía como una pantalla de prueba experimental mucho después de haberse convertido en la interfaz de producción. Ambos engañaron sesiones de depuración reales.
 
-## Before opening a pull request
+## Antes de abrir una pull request
 
 ```bash
 bash scripts/check-i18n.sh      # after touching i18n.h
@@ -64,71 +49,56 @@ bash scripts/update_toc.sh      # after adding/moving a "// §N — " banner
 pio run -e esp32s3_hsu_b        # must compile
 ```
 
-CI runs all of these on every push, plus a build of all five envs. Running them
-locally just gets you the answer faster.
+CI ejecuta todas estas en cada push, más una compilación de los cinco entornos. Ejecutarlas localmente solo te da la respuesta más rápido.
 
-If `check-codemap.sh` reports drift, fix the line numbers in `CODEMAP.md` — that
-is the intended response, not suppressing the check.
+Si `check-codemap.sh` reporta desviación, corrige los números de línea en `CODEMAP.md` — ese es la respuesta intencional, no suprimir la comprobación.
 
-## Adding a UI string
+## Añadir una cadena de UI
 
-1. Add the key to the enum in `TigerTagSplashESP32/i18n.h`, before `I18N_COUNT`.
-2. Add one entry to **all 8 language blocks**, in the same order as the enum.
-3. `bash scripts/check-i18n.sh` must exit 0.
+1. Añade la clave al enum en `TigerTagSplashESP32/i18n.h`, antes de `I18N_COUNT`.
+2. Añade una entrada a **todos los 8 bloques de idioma**, en el mismo orden que el enum.
+3. `bash scripts/check-i18n.sh` debe salir 0.
 
-If you can't translate into all 8, use the English string as a placeholder and say
-so in the pull request — a missing entry breaks the build, a placeholder doesn't.
+Si no puedes traducir a todos los 8, usa la cadena en inglés como marcador y di en la pull request — una entrada faltante rompe la compilación, un marcador no lo hace.
 
-Web UI strings are separate: `data/www/locales/*.json`.
+Las cadenas de la interfaz web son separadas: `data/www/locales/*.json`.
 
-## Changing how the UI looks
+## Cambiar cómo se ve la UI
 
-Two rules, both learned expensively:
+Dos reglas, ambas aprendidas a un costo alto:
 
-1. **A restyle is visual-only.** Colours, fonts, sizes, shapes, borders, layout —
-   yes. What data is displayed, how it's computed, or touch-zone coordinates — no.
-   Those are wired to live scale readings and Firestore fields, and they look just
-   like decorative chrome. If you can't tell which a label is, check the source
-   variable.
-2. **Show a mockup first.** At the real 480×320 proportions. Iterating on a mockup
-   is instant; compiling, flashing and photographing a device is not.
+1. **Un restyle es solo visual.** Colores, fuentes, tamaños, formas, bordes, diseño — sí. ¿Qué datos se muestra, cómo se calcula o coordenadas de zonas de toque — no. Estos están conectados a lecturas de escala viva y campos de Firestore, y se ven exactamente como chrome decorativo. Si no puedes decir cuál es una etiqueta, revisa la variable de origen.
+2. **Muestra un mockup primero.** En las proporciones reales de 480×320. Iterar sobre un mockup es instantáneo; compilar, flashar y fotografiar un dispositivo no lo es.
 
-Then read the [LVGL v8 traps](docs/FIRMWARE.md#lvgl-v8-traps). Every one of them
-is in that list because it already caught someone here.
+Luego lee [LVGL v8 traps](docs/FIRMWARE_ES.md#lvgl-v8-traps). Cada uno de ellos está en esa lista porque ya capturó a alguien aquí.
 
-## Reporting a bug
+## Reportar un error
 
-The two things that make a firmware report actionable:
+Las dos cosas que hacen un informe de firmware accionable:
 
-1. **Which build env** you flashed (`esp32s3_hsu_b` for a -3.5B board, `esp32s3_hsu` for a -3.5).
-2. **How your readers are wired.**
+1. **¿Cuál entorno de compilación** usaste para flashar (`esp32s3_hsu_b` para una placa -3.5B, `esp32s3_hsu` para una -3.5).
+2. **¿Cómo están conectados tus lectores.**
 
-Most "no readers detected" reports are firmware built for a transport that
-doesn't match the wiring — which produces no error message, so it's invisible
-without those two facts.
+La mayoría de los informes "no se detectan lectores" son firmware compilado para un transporte que no coincide con la conexión — lo que produce ningún mensaje de error, así que es invisible sin esos dos hechos.
 
-Then the serial log around the failure, and `TIGERSCALE_FW_VERSION`. The issue
-template asks for all of this.
+Luego el log serial alrededor del fallo, y `TIGERSCALE_FW_VERSION`. La plantilla de problema pide todo esto.
 
-## Things that are settled
+## Cosas que están decididas
 
-These have been investigated and closed; please don't reopen them without new
-evidence:
+Estas han sido investigadas y cerradas; por favor no las reabres sin nueva evidencia:
 
-| Topic | Why |
+| Tema | ¿Por qué |
 |-------|-----|
-| USB-host NFC | Physically impossible on this board — [postmortem](docs/USB_HOST_POSTMORTEM.md) |
-| Arduino IDE support | LVGL's config needs an include path the IDE lacks |
-| `Wire` / GPIO21+22 | GPIO22 doesn't exist on the ESP32-S3 |
-| Motorised spool rotation | No motor on this hardware |
-| Short-debounce auto-tare | Removed — it tared onto the spool's own weight |
+| NFC como host USB | Físicamente imposible en esta placa — [postmortem](docs/USB_HOST_POSTMORTEM_ES.md) |
+| Soporte para IDE Arduino | La configuración de LVGL necesita una ruta de inclusión que el IDE no tiene |
+| `Wire` / GPIO21+22 | GPIO22 no existe en el ESP32-S3 |
+| Rotación de bobina motorizada | No hay motor en este hardware |
+| Tare automática con debounce corto | Eliminado — tareaba sobre el peso propio de la bobina |
 
-## Security
+## Seguridad
 
-Please don't open a public issue for a security problem. See
-[SECURITY.md](SECURITY.md).
+Por favor, no abras un problema público para un problema de seguridad. Ver [SECURITY.md](SECURITY_ES.md).
 
-## License
+## Licencia
 
-Contributions are accepted under the [MIT License](LICENSE), the same terms as the
-rest of the project.
+Las contribuciones se aceptan bajo la [Licencia MIT](LICENSE), los mismos términos que el resto del proyecto.

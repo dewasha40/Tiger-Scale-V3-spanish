@@ -1,60 +1,243 @@
-# Instalar TigerScale V3
+# Instalación
 
-Esta guía resume la instalación del firmware en la báscula TigerScale V3. Para la lista exacta de componentes y el montaje mecánico, consulta [HARDWARE.md](HARDWARE.md). La guía original en inglés sigue disponible en [INSTALLATION.md](INSTALLATION.md).
+Compilar y cargar el firmware de TigerScale V3.
 
-## Antes de empezar
+## Requisitos
 
-- Placa Waveshare **ESP32-S3-Touch-LCD-3.5B** o **ESP32-S3-Touch-LCD-3.5**. Son variantes distintas: lee el texto impreso en la placa y selecciona la variante correcta.
-- Cable USB que permita transferir datos.
-- Plataforma con célula de carga de 5 kg y módulo HX711 montados y conectados.
-- Lectores PN532 instalados según el cableado documentado.
-- Navegador compatible con Web Serial para el instalador web, o PlatformIO para compilar desde el código.
+- **[PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/)** —
+  `pip install platformio`, o la extensión PlatformIO IDE para VS Code.
+- Un cable USB-C y la placa.
+- Python 3 (solo para `scripts/watch_logs.py`).
 
-## Instalación desde el navegador
+**Arduino IDE no puede compilar este proyecto.** La configuración de LVGL se
+encuentra mediante `-I include` junto con `LV_CONF_INCLUDE_SIMPLE`, y el IDE no
+proporciona una ruta de inclusión equivalente. PlatformIO es la única cadena de
+herramientas compatible.
 
-1. Conecta la placa al ordenador por USB.
-2. Abre el [instalador web de TigerScale](https://tigertag-project.github.io/Tiger-Scale-V3/) en Chrome o Edge.
-3. Selecciona el modelo exacto de placa, **-3.5B** o **-3.5**.
-4. Pulsa conectar y selecciona el puerto serie de la placa.
-5. Sigue el asistente y espera a que termine la escritura. No desconectes el USB durante el proceso.
-6. Reinicia la placa cuando el instalador lo indique.
+## ¿Qué compilación necesito?
 
-El primer inicio puede tardar mientras se prepara la interfaz. Sigue el asistente de la pantalla para seleccionar idioma, red y opciones de la báscula.
+Hay dos aspectos que se fijan **al compilar**: el modelo de placa de pantalla y
+el cableado de los módulos PN532. Las dos compilaciones publicadas suponen el
+cableado HSU/UART, que es el descrito en la guía de montaje y el utilizado en
+las básculas instaladas.
 
-## Compilar desde el código
+| Tu placa | Entorno de compilación | Publicada |
+|------------|-----------|-----------|
+| ESP32-S3-Touch-LCD-3.5**B** | `esp32s3_hsu_b` | sí — predeterminado en el instalador web |
+| ESP32-S3-Touch-LCD-3.5 (sin B) | `esp32s3_hsu` | sí |
 
-1. Instala Git, Python y PlatformIO.
-2. Clona este repositorio y ábrelo en VS Code con PlatformIO.
-3. En `platformio.ini`, selecciona el entorno correspondiente a la variante y al transporte NFC del montaje.
-4. Compila y carga el entorno seleccionado por USB.
-5. Consulta el monitor serie si el arranque o la inicialización del hardware falla.
+Lee la serigrafía blanca de la placa, justo debajo del conector de cinta: el
+modelo termina en B o no. Ambas placas tienen el mismo tamaño y usan el mismo
+cableado, pero sus controladores de pantalla son distintos (AXS15231B por QSPI
+en el modelo B y ST7796 por SPI en el otro). Si cargas la imagen equivocada,
+la placa se programa correctamente, pero la pantalla no se enciende.
 
-No elijas el entorno solo por el nombre: coteja la variante de pantalla y el transporte NFC con [HARDWARE.md](HARDWARE.md) y los entornos del archivo `platformio.ini`.
+Los otros dos transportes ya no se publican: todas las básculas instaladas usan
+HSU y ofrecer una opción cuyo fallo es silencioso («sin lectores», sin explicar
+el motivo) causaba más problemas de los que resolvía. Aun así, se pueden compilar
+desde el código fuente:
 
-## Primera configuración y calibración
+| Tu cableado | Entorno de compilación | Lectores |
+|-------------|-----------|---------|
+| SPI | `esp32s3` | 2 — compila, pero no se ha verificado en banco |
+| I²C en `Wire1` | `esp32s3_i2c` | 1 — la dirección del PN532 es fija |
 
-- Selecciona español en los ajustes de idioma; en este fork es el idioma inicial para instalaciones nuevas.
-- Configura Wi-Fi si quieres sincronización. El pesaje y las funciones locales pueden utilizarse sin conexión.
-- Calibra la célula de carga siguiendo el asistente de la pantalla y una masa conocida. No uses lecturas de ejemplo como calibración.
-- Comprueba la tara sin una bobina y después coloca una bobina para validar el signo y la estabilidad del peso.
-- Prueba la lectura de las etiquetas con los lectores instalados. La orientación y distancia dependen de la caja y del cableado.
+Consulta los esquemas de cableado en [HARDWARE.md](HARDWARE.md#nfc-wiring--pick-one-then-build-the-matching-env).
 
-## Actualizaciones
+## Primera instalación en una placa nueva
 
-Usa el instalador para actualizar la placa y selecciona siempre la misma variante física. Antes de actualizar, revisa las notas de la versión. No borres el almacenamiento si quieres conservar la configuración guardada.
+### Opción más sencilla: instalador web
 
-## Simulador de PC
+<https://tigertag-project.github.io/Tiger-Scale-V3/>
 
-El perfil de simulación de esta entrega está en [`../simulador/tigerscale_v3.sim.json`](../simulador/tigerscale_v3.sim.json). Copia ese archivo a la carpeta `perfiles` del ESP32 Simulador que ya contiene el proyecto `tigerscale_v3` y reinicia el simulador. Selecciona TigerScale V3 y pulsa Play. La maqueta de PC representa la pantalla 480 × 320 con datos ficticios; no ejecuta este firmware ni valida el hardware.
+Conecta la placa, elige el cableado NFC y pulsa **Instalar**. El instalador carga
+de una vez el bootloader, la tabla de particiones, el firmware y la interfaz web.
+En un ordenador, usa Chrome, Edge u Opera: Web Serial no está disponible en
+Safari, Firefox ni en dispositivos móviles.
 
-Capturas de las tres páginas simuladas: [báscula](img/interfaz-bascula-simulada.png), [bobina](img/interfaz-bobina-simulada.png) y [ajustes](img/interfaz-ajustes-simulada.png).
+Ten en cuenta que **el instalador borra la placa**, incluida la configuración
+Wi-Fi guardada. Esto es lo correcto para una placa nueva; para actualizar una
+báscula en uso, consulta [Actualizar más adelante](#actualizar-más-adelante).
 
-## Problemas habituales
+### Desde el código fuente
 
-- **No aparece el puerto:** prueba otro cable USB de datos, otro puerto del PC y el controlador indicado por Waveshare.
-- **Pantalla en blanco o variante incorrecta:** revisa la serigrafía y vuelve a instalar la compilación de la placa correcta.
-- **Peso inestable o incorrecto:** revisa la fijación mecánica, los tornillos, el HX711 y las conexiones de la célula; vuelve a calibrar con una masa conocida.
-- **No lee etiquetas:** comprueba el transporte seleccionado, el cableado y la posición de los lectores PN532.
-- **No sincroniza:** valida Wi-Fi y credenciales; la falta de nube no debería impedir el pesaje local.
+**Un solo comando.** En una placa que nunca se haya programado, esto completa la
+instalación:
 
-Para más diagnósticos, consulta [TROUBLESHOOTING.md](TROUBLESHOOTING.md) (original en inglés) y [SERIAL-PORT.md](SERIAL-PORT.md).
+```bash
+git clone https://github.com/TigerTag-Project/Tiger-Scale-V3.git
+cd Tiger-Scale-V3
+
+bash scripts/flash.sh --fs
+```
+
+El argumento `--fs` es necesario en la primera instalación y es fácil omitirlo.
+En la memoria flash hay dos componentes separados y se escriben en pasos
+independientes:
+
+| Componente | Ubicación | Se escribe con |
+|---|---|---|
+| Firmware (la aplicación) | `app0` @ 0x10000 | cada carga |
+| Interfaz web (`data/`) | `spiffs` @ 0x650000 | **solo** con `--fs` / `-t uploadfs` |
+
+Si cargas el firmware sin `--fs`, la báscula funciona, pero la interfaz web
+responde con un error 404. Puede parecer un fallo del firmware, pero no lo es.
+Si ocurre, vuelve a ejecutar `bash scripts/flash.sh --fs`.
+
+Añade `--monitor` si quieres observar el arranque:
+
+```bash
+bash scripts/flash.sh --fs --monitor
+```
+
+### Si no se detecta la placa
+
+El ESP32-S3 expone un puerto USB-Serial/JTAG nativo y esptool lo reinicia
+automáticamente. En la unidad de referencia no hizo falta pulsar ningún botón.
+Si el puerto no aparece:
+
+- Espera unos segundos. La enumeración puede tardar; un escaneo justo después
+de conectar la placa quizá no muestre nada y sí funcione al repetirlo.
+- Comprueba que el cable transmite datos y no solo alimentación.
+- Fuerza el modo de descarga: mantén pulsado **BOOT**, pulsa y suelta **RESET**,
+y después suelta **BOOT** antes de cargar el firmware.
+- Indica el puerto explícitamente: `bash scripts/flash.sh --fs --port /dev/cu.usbmodem1101`
+(`pio device list` muestra los puertos disponibles).
+
+Una placa que responde correctamente muestra algo parecido a esto:
+
+```
+Chip type:  ESP32-S3 (QFN56) (revision v0.2)
+Features:   Wi-Fi, BT 5 (LE), Dual Core + LP Core, 240MHz, Embedded PSRAM 8MB
+Detected flash size: 16MB
+```
+
+### ¿Ha funcionado?
+
+El registro de arranque debería mostrar estos mensajes, en este orden:
+
+```
+[LCD] begin OK w=480 h=320
+[TOUCH] Wire1 SDA=8 SCL=7 addr=0x3B probe=0 (ACK)
+[I2C] Scan done. 6 device(s) found.
+[RFID] PN532-1 ready
+[RFID] PN532-2 ready
+[LITTLEFS] Mounted OK
+[DB] Brand DB loaded: 120 entries
+```
+
+Comprueba que aparezcan `PN532-1 ready` y `PN532-2 ready`. Si no detecta ningún
+lector, casi seguro que compilaste el entorno de transporte incorrecto para tu
+cableado. Consulta la tabla anterior y [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+Hay dos mensajes de arranque que parecen alarmantes, pero son esperables en esta
+placa: `perimanSetPinBus(): Invalid pin: 22` y algunas líneas `NULL TX buffer
+pointer`. Proceden de un bus I²C del fabricante que no puede funcionar en el
+ESP32-S3. [HARDWARE.md](HARDWARE.md#ic-topology--read-this-before-adding-any-peripheral)
+explica el motivo.
+
+## Actualizar más adelante
+
+### Por el aire — solo firmware
+
+En la pantalla táctil, abre **Ajustes → Actualización** para comprobar el
+manifiesto publicado e instalar una versión más reciente con una barra de
+progreso. No necesitas conectar un cable.
+
+> [!WARNING]
+> **La actualización de firmware por el aire no funciona con la tabla de
+> particiones actual.** `app0` es una única partición `factory` y no tiene una
+> ranura `ota_0`/`ota_1` adicional donde escribir la nueva imagen. El mecanismo
+> OTA de ESP-IDF no tiene dónde guardar la imagen y falla con `Update.begin
+> failed (need=… free=0)`. El actualizador detecta este caso y muestra «Actualizar
+> por USB» en vez de empezar. La actualización de la **interfaz web** por el aire
+> sí funciona. Hasta que la tabla de particiones incluya una segunda ranura de
+> aplicación, actualiza el firmware por USB.
+
+Hay otros dos límites que debes conocer:
+
+- **OTA solo sustituye el firmware, no la interfaz web.** El manifiesto publicado
+en GitHub Pages contiene `firmware_url` y nada más. Si una versión cambia
+archivos de `data/`, también tendrás que cargar ese sistema de archivos por USB
+con `--fs`. (El firmware sí admite `littlefs_url` mediante su endpoint local
+`POST /api/ota/update` y la cola remota de comandos, de modo que una aplicación
+puede enviar una actualización del sistema de archivos; el flujo automático de
+**Ajustes → Actualización** no puede hacerlo.)
+- **Las compilaciones publicadas suponen cableado HSU**: hay una por modelo de
+placa y ninguna para SPI o I²C. Si tu unidad usa uno de esos transportes e instala
+una actualización publicada, volverá a la compilación HSU y sus lectores dejarán
+de funcionar hasta que vuelvas a cargar el firmware correcto por USB.
+
+También tiene que existir una versión publicada. Hasta que se etiquete la
+primera versión, **Ajustes → Actualización** indicará que no puede acceder al
+manifiesto.
+
+### Por USB — para todo
+
+```bash
+bash scripts/flash.sh              # solo firmware; conserva los ajustes
+bash scripts/flash.sh --fs         # firmware e interfaz web
+```
+
+En ambos casos se conservan las credenciales Wi-Fi, la sesión de TigerTag y la
+calibración. Consulta la explicación siguiente.
+
+## Por qué se conservan los ajustes al volver a cargar el firmware
+
+PlatformIO escribe cada imagen en su propio desplazamiento:
+
+```
+ 0x0000  bootloader.bin
+ 0x8000  partitions.bin
+ 0xE000  boot_app0.bin
+0x10000  firmware.bin
+```
+
+NVS ocupa las direcciones 0x9000–0xE000 y no está dentro de ninguno de esos
+rangos. Por tanto, se conservan las credenciales Wi-Fi, la sesión de TigerTag y
+el factor de calibración. Esto se ha comprobado, no es una suposición: se leyó la
+NVS de la unidad de referencia antes y después de volver a cargar el firmware,
+y el SSID, el factor de tara y los ajustes seguían guardados.
+
+**La excepción:** cargar `.pio/build/<env>/firmware.factory.bin` como un único
+bloque en `0x0000`. Ese archivo es una imagen combinada que ocupa continuamente
+la memoria desde 0x0000 y sí sobrescribe NVS. Por eso, durante el desarrollo,
+las credenciales desaparecían al volver a cargar el firmware. Ni
+`scripts/flash.sh` ni `pio run -t upload` hacen esto.
+
+Para empezar desde cero, ejecuta `bash scripts/flash.sh --erase`. El comando
+borra todo, incluida la calibración, después de pedir confirmación.
+
+El modo de flash está fijado en **DIO** en la configuración de la placa. QIO
+provoca un ciclo de errores de arranque en `ets_loader.c` en esta placa; no lo
+cambies para «optimizar» el rendimiento.
+
+## Ejecutar PlatformIO directamente
+
+```bash
+pio run -e esp32s3_hsu_b              # compilar
+pio run -e esp32s3_hsu_b -t upload    # cargar firmware
+pio run -e esp32s3_hsu_b -t uploadfs  # cargar interfaz web (LittleFS)
+pio device monitor                   # consola serie
+```
+
+## Primer arranque
+
+1. Aparecerá la pantalla de inicio de TigerTag y, después, la pantalla de
+configuración Wi-Fi.
+2. Elige tu red en la pantalla táctil e introduce la contraseña.
+3. Inicia sesión en tu cuenta de TigerTag desde **Ajustes → Nube**.
+4. Calibra la báscula en **Ajustes → Calibración** y sigue el asistente usando
+una masa de referencia conocida.
+5. Coloca una bobina con etiqueta TigerTag. La báscula la leerá, la pesará y
+sincronizará la información.
+
+La interfaz web del dispositivo está disponible en `http://<ip-del-dispositivo>/`.
+La dirección aparece en **Ajustes → Wi-Fi**. También puedes usar
+`http://tigerscale-XXXX.local/`; los cuatro dígitos hexadecimales aparecen en la
+misma pantalla y se resuelven mediante mDNS.
+
+## Resolución de problemas
+
+Empieza por [TROUBLESHOOTING.md](TROUBLESHOOTING.md). La causa más frecuente de
+«no se detectan lectores» es haber compilado el entorno de transporte incorrecto.

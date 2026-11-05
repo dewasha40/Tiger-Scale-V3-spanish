@@ -1,41 +1,30 @@
-# Code of Conduct
+# Código de Conducta
 
-## In short
+## En resumen
 
-Be decent to people. This is a hobbyist hardware project — nobody is here to
-have a bad time.
+Sé respetuoso con las personas. Este es un proyecto de hardware aficionado — nadie está aquí para pasar un mal rato.
 
-## What's expected
+## Lo que se espera
 
-- Be welcoming to people at every level of experience. "How do I flash this?" is
-  a fine question. So is "why is this one file 12 000 lines long?"
-- Give feedback on the work, not the person.
-- Assume good faith. Most disagreements here are about hardware behaviour, and
-  hardware behaviour is checkable — check it before assuming someone is wrong.
-- Accept that maintainers may say no, and that reviews take time. This is nobody's
-  full-time job.
+- Sé acogedor con las personas en todos los niveles de experiencia. "¿Cómo flasho esto?" es una pregunta adecuada. Así como "¿por qué este archivo tiene 12 000 líneas?"
+- Ofrece retroalimentación sobre el trabajo, no sobre la persona.
+- Asume buena fe. La mayoría de los desacuerdos aquí son sobre el comportamiento del hardware, y el comportamiento del hardware es verificable — verifica antes de asumir que alguien está equivocado.
+- Acepta que los mantenedores pueden decir que no, y que las revisiones toman tiempo. Esto no es un trabajo a tiempo completo de nadie.
 
-## What isn't
+## Lo que no se permite
 
-Harassment, personal attacks, discriminatory language, sexualised content,
-deliberate intimidation, publishing others' private information, or persistent
-disruption after being asked to stop.
+Acoso, ataques personales, lenguaje discriminador, contenido sexualizado, intimidación deliberada, publicar información privada de otros, o interrupción persistente después de haber sido pedido que deje de hacerlo.
 
-## Scope
+## Ámbito de aplicación
 
-Applies in this repository's issues, pull requests and discussions, in the project
-Discord, and anywhere someone is representing the project.
+Se aplica en los problemas, solicitudes de extracción y discusiones de este repositorio, en el Discord del proyecto, y en cualquier lugar donde alguien represente al proyecto.
 
-## Reporting
+## Denuncia
 
-Email **benoit@atome3d.com**. Reports are handled privately, and the reporter's
-identity is not shared with the person reported.
+Correo electrónico **benoit@atome3d.com**. Las denuncias se manejan de forma privada, y la identidad del denunciante no se comparte con la persona denunciada.
 
-Maintainers may edit or delete content, close threads, or block accounts as they
-judge necessary. Where the situation isn't obvious, expect a warning before
-anything stronger.
+Los mantenedores pueden editar o eliminar contenido, cerrar hilos o bloquear cuentas según consideren necesario. En situaciones donde no es claro, se espera una advertencia antes de tomar medidas más fuertes.
 
-## Attribution
+## Reconocimiento
 
-Adapted from the [Contributor Covenant](https://www.contributor-covenant.org),
-version 2.1, condensed to the parts that apply to a project this size.
+Adaptado de [Contributor Covenant](https://www.contributor-covenant.org), versión 2.1, reducido a las partes que aplican a un proyecto de este tamaño.

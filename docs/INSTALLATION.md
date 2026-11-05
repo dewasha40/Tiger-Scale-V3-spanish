@@ -1,62 +1,57 @@
-# Installation
+# Instalación
 
-Building and flashing TigerScale V3 firmware.
+Compilación y programación de la firmware de TigerScale V3.
 
-## Requirements
+## Requisitos
 
 - **[PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/)** —
-  `pip install platformio`, or the PlatformIO IDE extension for VS Code
-- A USB-C cable and the board
-- Python 3 (only for `scripts/watch_logs.py`)
+  `pip install platformio`, o la extensión de PlatformIO para VS Code
+- Un cable USB-C y la placa
+- Python 3 (solo para `scripts/watch_logs.py`)
 
-**The Arduino IDE cannot build this project.** LVGL's configuration is located
-through `-I include` combined with `LV_CONF_INCLUDE_SIMPLE`, and the IDE provides
-no equivalent include path. PlatformIO is the only supported toolchain.
+**El IDE Arduino no puede compilar este proyecto.** La configuración de LVGL se encuentra
+a través de `-I include` combinado con `LV_CONF_INCLUDE_SIMPLE`, y el IDE no proporciona
+una ruta de inclusión equivalente. PlatformIO es el único entorno de herramientas admitido.
 
-## Which build do I need?
+## ¿Qué compilación necesito?
 
-Two things are fixed at **compile time**: which display board you have, and how
-your PN532 modules are wired. Both published builds assume the HSU / UART wiring,
-which is what the build guide describes and what every scale in use is built on.
+Dos cosas están fijadas en **tiempo de compilación**: qué placa de visualización tienes y cómo
+están conectados tus módulos PN532. Ambas compilaciones publicadas asumen la conexión HSU / UART,
+que es lo que describe la guía de compilación y lo que todas las básculas en uso están construidas.
 
-| Your board | Build env | Published |
-|------------|-----------|-----------|
-| ESP32-S3-Touch-LCD-3.5**B** | `esp32s3_hsu_b` | yes — the default in the web installer |
-| ESP32-S3-Touch-LCD-3.5 (no B) | `esp32s3_hsu` | yes |
+| Tu placa | Entorno de compilación | Publicado |
+|----------|------------------------|-----------|
+| ESP32-S3-Touch-LCD-3.5**B** | `esp32s3_hsu_b` | sí — el predeterminado en el instalador web |
+| ESP32-S3-Touch-LCD-3.5 (sin B) | `esp32s3_hsu` | sí |
 
-Read the white silkscreen on your board, just under the ribbon connector: it
-either ends with a B or it does not. The two are the same size and take the same
-wiring, but their screen controllers differ (AXS15231B over QSPI on the B,
-ST7796 over SPI on the other), so the wrong image leaves you with a board that
-flashes fine and never lights its screen.
+Lee la escritura blanca en tu placa, justo debajo de la conexión de cinta: termina
+con una B o no. Las dos son del mismo tamaño y usan la misma conexión, pero sus controladores de pantalla difieren (AXS15231B sobre QSPI en la B, ST7796 sobre SPI en la otra), por lo que la imagen incorrecta te deja con una placa que se programa correctamente pero nunca enciende su pantalla.
 
-The other two transports are not published any more — every scale in the field
-is wired HSU, and offering a choice whose failure mode is silent ("no readers",
-no reason given) cost more than it helped. They still build from source:
+Las otras dos transportes no se publican más — todas las básculas en el campo están conectadas HSU, y ofrecer una elección cuyo modo de fallo es silencioso ("sin lectores", sin razón dada) cuesta más de lo que ayuda. Aún así, se pueden compilar desde la fuente:
 
-| Your wiring | Build env | Readers |
-|-------------|-----------|---------|
-| SPI | `esp32s3` | 2 — compiles, not bench-verified |
-| I²C on `Wire1` | `esp32s3_i2c` | 1 — the PN532's address is fixed |
+| Tu conexión | Entorno de compilación | Lectores |
+|-------------|------------------------|----------|
+| SPI | `esp32s3` | 2 — se compila, no se ha verificado en pruebas |
+| I²C en `Wire1` | `esp32s3_i2c` | 1 — la dirección del PN532 es fija |
 
-Wiring diagrams for each: [HARDWARE.md](HARDWARE.md#nfc-wiring--pick-one-then-build-the-matching-env).
+Diagramas de conexión para cada uno: [HARDWARE.md](HARDWARE_ES.md#nfc-wiring--pick-one-then-build-the-matching-env).
 
-## First install on a new board
+## Instalación inicial en una placa nueva
 
-### Easiest: the web installer
+### Más fácil: instalador web
 
 <https://tigertag-project.github.io/Tiger-Scale-V3/>
 
-Plug the board in, choose your NFC wiring, click Install. It writes the bootloader,
-partition table, firmware and web UI in one go. Chrome, Edge or Opera on a desktop —
-Web Serial is not available in Safari, Firefox or on mobile.
+Conecta la placa, elige tu conexión NFC, haz clic en Instalar. Escribirá el bootloader,
+tabla de particiones, firmware y interfaz web en un solo paso. Chrome, Edge o Opera en escritorio —
+Web Serial no está disponible en Safari, Firefox o en móvil.
 
-Note it **erases the board**, saved WiFi included. That is right for new hardware; to
-update a scale already in use, see [Updating later](#updating-later).
+Nota que **borra la placa**, incluyendo la WiFi guardada. Eso es correcto para hardware nuevo; para
+actualizar una báscula ya en uso, ve a [Updating later](#updating-later).
 
-### From source
+### Desde la fuente
 
-**One command.** On a board that has never been flashed, this is the whole job:
+**Un comando.** En una placa que nunca haya sido programada, esto es el trabajo completo:
 
 ```bash
 git clone https://github.com/TigerTag-Project/Tiger-Scale-V3.git
@@ -65,37 +60,37 @@ cd Tiger-Scale-V3
 bash scripts/flash.sh --fs
 ```
 
-`--fs` matters on a first install and is easy to skip. Two separate things live in
-flash and they are written by two separate steps:
+`--fs` importa en una instalación inicial y es fácil de omitir. Dos cosas distintas viven en
+flash y se escriben en pasos separados:
 
-| What | Where | Written by |
+| Lo que | Donde | Escrito por |
 |---|---|---|
-| Firmware (the app) | `app0` @ 0x10000 | every flash |
-| Web UI (`data/`) | `spiffs` @ 0x650000 | **only** with `--fs` / `-t uploadfs` |
+| Firmware (la aplicación) | `app0` @ 0x10000 | cada flash |
+| Interfaz web (`data/`) | `spiffs` @ 0x650000 | **solo** con `--fs` / `-t uploadfs` |
 
-Flash without `--fs` and the scale works, but its web interface answers 404 —
-which looks like a bug and is not one. If that happens, just run
-`bash scripts/flash.sh --fs` again.
+Programar sin `--fs` y la báscula funciona, pero su interfaz web responde 404 —
+lo que parece un error y no lo es. Si eso ocurre, simplemente ejecuta
+`bash scripts/flash.sh --fs` nuevamente.
 
-Add `--monitor` if you want to watch it boot:
+Agrega `--monitor` si quieres ver el encendido:
 
 ```bash
 bash scripts/flash.sh --fs --monitor
 ```
 
-### If the board is not detected
+### Si la placa no se detecta
 
-The ESP32-S3 exposes a native USB-Serial/JTAG port, and esptool resets it for you —
-on the reference unit no button press was needed. If your port never appears:
+La ESP32-S3 expone un puerto USB-Serial/JTAG nativo, y esptool lo reinicia por ti —
+en la unidad de referencia no se necesitaba presionar el botón. Si tu puerto nunca aparece:
 
-- Give it a few seconds. Enumeration can lag; a port scan run immediately after
-  plugging in may show nothing, then succeed on a retry.
-- Check the cable carries data, not just power.
-- Force download mode: hold **BOOT**, tap **RESET**, release **BOOT**, then flash.
-- Pass the port explicitly: `bash scripts/flash.sh --fs --port /dev/cu.usbmodem1101`
-  (`pio device list` will show candidates).
+- Dales unos segundos. La enumeración puede retrasarse; un escaneo de puerto inmediatamente después
+  de enchufar puede mostrar nada, pero puede tener éxito en un reintento.
+- Verifica que el cable lleve datos, no solo energía.
+- Modo de descarga forzado: mantén **BOOT**, toca **RESET**, suelta **BOOT**, luego programa.
+- Pasar el puerto explícitamente: `bash scripts/flash.sh --fs --port /dev/cu.usbmodem1101`
+  (`pio device list` mostrará candidatos).
 
-A correctly-talking board answers like this:
+Una placa que habla correctamente responde así:
 
 ```
 Chip type:  ESP32-S3 (QFN56) (revision v0.2)
@@ -103,9 +98,9 @@ Features:   Wi-Fi, BT 5 (LE), Dual Core + LP Core, 240MHz, Embedded PSRAM 8MB
 Detected flash size: 16MB
 ```
 
-### Did it work?
+### ¿Funcionó?
 
-The boot log should show, in this order:
+El registro de encendido debe mostrar, en este orden:
 
 ```
 [LCD] begin OK w=480 h=320
@@ -117,58 +112,51 @@ The boot log should show, in this order:
 [DB] Brand DB loaded: 120 entries
 ```
 
-`PN532-1 ready` / `PN532-2 ready` is the one to check. If you see no readers, you
-almost certainly built the wrong transport env for your wiring — see the table
-above, and [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+`PN532-1 listo` / `PN532-2 listo` es lo que debes verificar. Si no ves lectores, casi seguramente construiste el entorno de transporte incorrecto para tu conexión — ve a la tabla
+arriba, y [TROUBLESHOOTING.md](TROUBLESHOOTING_ES.md).
 
-Two boot messages look alarming and are expected on this board:
-`perimanSetPinBus(): Invalid pin: 22` and a few `NULL TX buffer pointer` lines.
-They come from a vendor I²C bus that cannot work on the ESP32-S3.
-[HARDWARE.md](HARDWARE.md#ic-topology--read-this-before-adding-any-peripheral)
-explains why.
+Dos mensajes de encendido parecen alarmantes y son esperados en esta placa:
+`perimanSetPinBus(): Pin inválido: 22` y algunas líneas `NULL TX buffer pointer`.
+Proceden de un bus I²C de un proveedor que no puede funcionar en la ESP32-S3.
+[HARDWARE.md](HARDWARE_ES.md#ic-topology--read-this-before-adding-any-peripheral)
+explica por qué.
 
-## Updating later
+## Actualización posterior
 
-### Over the air — for firmware
+### Por aire — para firmware
 
-**Settings → Update** on the touchscreen checks the published manifest and installs
-a newer firmware with a progress bar. Nothing to plug in.
+**Configuración → Actualizar** en la pantalla táctil verifica el manifiesto publicado e instala
+un firmware más reciente con una barra de progreso. No se necesita enchufar nada.
 
 > [!WARNING]
-> **Firmware update over the air does not work on the current partition table.**
-> `app0` is a single `factory` partition with no `ota_0`/`ota_1` slot beside it, so
-> the ESP-IDF OTA machinery has nowhere to write the new image and the install fails
-> with `Update.begin failed (need=… free=0)`. The updater checks for this and shows
-> "Update over USB" instead of starting. Updating the **web UI** over the air does
-> work. Reflash firmware over USB until the partition table gains a second app slot.
+> **La actualización por aire del firmware no funciona en la tabla de particiones actual.**
+> `app0` es una sola partición `factory` sin ranura `ota_0`/`ota_1` a su lado, por lo que
+> la maquinaria OTA de ESP-IDF no tiene lugar para escribir la nueva imagen y la instalación falla
+> con `Update.begin failed (need=… free=0)`. El actualizador verifica esto y muestra
+> "Actualización por USB" en lugar de iniciar. La actualización del **interfaz web** por aire
+> sí funciona. Reflash el firmware por USB hasta que la tabla de particiones gane una segunda ranura de app.
 
-Two further limits worth knowing:
+Dos límites adicionales que vale la pena conocer:
 
-- **OTA replaces the firmware only — not the web UI.** The manifest published on
-  GitHub Pages carries a `firmware_url` and nothing else, so a release that changes
-  anything under `data/` still needs a USB `--fs` upload. (The firmware itself does
-  accept a `littlefs_url`, via its local `POST /api/ota/update` endpoint and the
-  remote command queue, so an app can push a filesystem update — but the
-  self-service Settings → Update path cannot.)
-- **Published builds assume the HSU wiring** — one per board, and nothing for SPI
-  or I²C. A unit wired either way that takes a published update comes back on the
-  HSU build and loses its reader until reflashed over USB.
+- **OTA reemplaza solo el firmware — no la interfaz web.** El manifiesto publicado en GitHub Pages lleva un `firmware_url` y nada más, por lo que una versión que cambie algo bajo `data/` aún necesita una carga USB `--fs`.
+- **Las compilaciones publicadas asumen la conexión HSU** — una por placa, y nada para SPI
+  o I²C. Una unidad conectada de alguna manera que tome una actualización publicada regresa en la compilación HSU y pierde sus lectores hasta que se reflashe por USB.
 
-OTA also needs a published release to exist. Until the first version is tagged,
-Settings → Update will simply report that it cannot reach the manifest.
+OTA también necesita que exista una versión publicada. Hasta que la primera versión se etiquete,
+"Configuración → Actualizar" simplemente reportará que no puede alcanzar el manifiesto.
 
-### Over USB — for everything
+### Por USB — para todo
 
 ```bash
 bash scripts/flash.sh              # firmware only, keeps your settings
 bash scripts/flash.sh --fs         # firmware + web UI
 ```
 
-Your WiFi credentials, TigerTag session and calibration survive both — see below.
+Tus credenciales WiFi, sesión TigerTag y calibración sobreviven ambos — ve abajo.
 
-## Why your settings survive a reflash
+## ¿Por qué tus ajustes sobreviven un reflash
 
-PlatformIO writes each image at its own offset:
+PlatformIO escribe cada imagen en su propio desplazamiento:
 
 ```
  0x0000  bootloader.bin
@@ -177,23 +165,15 @@ PlatformIO writes each image at its own offset:
 0x10000  firmware.bin
 ```
 
-NVS lives at 0x9000–0xE000, in none of those ranges. WiFi credentials, the TigerTag
-session and the calibration factor all survive. This is verified, not assumed: NVS
-was read out of the reference unit before and after a reflash, and the saved SSID,
-tare factor and settings were all still there.
+NVS vive en 0x9000–0xE000, fuera de esos rangos. Las credenciales WiFi, la sesión TigerTag y el factor de calibración sobreviven. Esto se verifica, no se asume: NVS se leyó de la unidad de referencia antes y después de un reflash, y las credenciales SSID, el factor de tara y los ajustes estaban todos allí.
 
-**The trap:** flashing `.pio/build/<env>/firmware.factory.bin` at `0x0000` as a
-single blob. That file is a *merged* image spanning 0x0000 upward continuously, so
-it does overwrite NVS — which is why credentials used to disappear on every reflash
-during development. Neither `scripts/flash.sh` nor `pio run -t upload` does this.
+**La trampa:** programar `.pio/build/<env>/firmware.factory.bin` en `0x0000` como un solo blob. Este archivo es una imagen *fusionada* que abarca 0x0000 hacia arriba continuamente, por lo que lo sobrescribe NVS — lo que es por qué las credenciales se perdían en cada reflash durante el desarrollo. Ni `scripts/flash.sh` ni `pio run -t upload` hacen esto.
 
-For a genuine clean slate, `bash scripts/flash.sh --erase` wipes everything
-including calibration, after asking for confirmation.
+Para un estado limpio real, `bash scripts/flash.sh --erase` borra todo incluyendo la calibración, después de pedir confirmación.
 
-Flash mode is fixed to **DIO** by the board configuration. QIO produces a boot crash
-loop in `ets_loader.c` on this board — do not "optimise" it.
+El modo de programación está fijado a **DIO** por la configuración de la placa. QIO produce un bucle de reinicio en `ets_loader.c` en esta placa — no "optimices"lo.
 
-## Driving PlatformIO directly
+## Dirigir PlatformIO directamente
 
 ```bash
 pio run -e esp32s3_hsu_b              # build
@@ -202,20 +182,16 @@ pio run -e esp32s3_hsu_b -t uploadfs  # flash the web UI (LittleFS)
 pio device monitor                  # serial console
 ```
 
-## First boot
+## Primer encendido
 
-1. The TigerTag splash appears, then a WiFi setup screen.
-2. Pick your network on the touchscreen and enter the password.
-3. Sign in to your TigerTag account from **Settings → Cloud**.
-4. Calibrate the scale: **Settings → Calibration**, then follow the wizard with a
-   known reference weight.
-5. Place a spool carrying a TigerTag tag. The scale reads it, weighs it, and syncs.
+1. Aparece el splash de TigerTag, luego una pantalla de configuración WiFi.
+2. Elige tu red en la pantalla táctil y entra la contraseña.
+3. Inicia sesión en tu cuenta TigerTag desde **Configuración → Nube**.
+4. Calibra la báscula: **Configuración → Calibración**, luego sigue el asistente con un peso de referencia conocido.
+5. Coloca un rollo que lleve una etiqueta TigerTag. La báscula lo lee, lo pesa y sincroniza.
 
-The device's own web UI is reachable at `http://<device-ip>/` — the address is
-shown under **Settings → WiFi** — and at `http://tigerscale-XXXX.local/` (the four hex digits are shown on that same screen) where mDNS
-resolves.
+La interfaz web del dispositivo es accesible en `http://<dirección-ip-del-dispositivo>/` — la dirección se muestra bajo **Configuración → WiFi** — y en `http://tigerscale-XXXX.local/` (los cuatro dígitos hexadecimales se muestran en esa misma pantalla) donde mDNS resuelve.
 
-## Troubleshooting
+## Solución de problemas
 
-Start with [TROUBLESHOOTING.md](TROUBLESHOOTING.md). The single most common cause
-of "no readers detected" is having built the wrong transport env.
+Comienza con [TROUBLESHOOTING.md](TROUBLESHOOTING_ES.md). La causa más común de "no se detectaron lectores" es haber construido el entorno de transporte incorrecto.

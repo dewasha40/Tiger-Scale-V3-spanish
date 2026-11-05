@@ -1,89 +1,61 @@
-# Postmortem — USB-host NFC on the ESP32-S3-Touch-LCD-3.5
+# Postmortem — NFC USB-host en el ESP32-S3-Touch-LCD-3.5
 
-**Verdict: physically impossible on this board. Do not re-attempt it in firmware.**
+**Verdict: imposible físicamente en esta placa. No vuelva a intentarlo en el firmware.**
 
-This document exists so that the conclusion survives the code being deleted. If
-you are about to try driving a USB NFC reader from this board, read this first —
-it will save you a few days.
+Este documento existe para que la conclusión sobreviva al código siendo eliminado. Si estás a punto de intentar hacer funcionar un lector NFC USB desde esta placa, léelo primero — te ahorrará varios días.
 
-## What was attempted
+## Lo que se intentó
 
-Some PN532 modules ship as sealed USB-C dongles with no accessible GPIO header at
-all. The idea was to keep using such a module by having the ESP32-S3 act as **USB
-Host**, with the module plugged into a self-powered hub, talking to it over
-USB-CDC through its CH340 bridge chip.
+Algunos módulos PN532 vienen como dispositivos USB-C sellados sin ninguna interfaz GPIO accesible. La idea era seguir usando tal módulo haciendo que el ESP32-S3 actúe como **USB Host**, con el módulo conectado a un hub autónomo, comunicándose con él a través de USB-CDC mediante su chip CH340 de puente.
 
-Implementation: an `esp32s3_usbhost` PlatformIO env, the `EspUsbHost` library, and
-a vendored `Adafruit_PN532` fork whose serial constructor took a generic `Stream*`
-rather than a `HardwareSerial*` so a USB-CDC bridge object could be passed in.
+Implementación: un entorno `esp32s3_usbhost` de PlatformIO, la biblioteca `EspUsbHost`, y una versión vendida de `Adafruit_PN532` cuyo constructor serial aceptaba un `Stream*` genérico en lugar de un `HardwareSerial*` para poder pasar un objeto de puente USB-CDC.
 
-## Why it cannot work
+## ¿Por qué no puede funcionar
 
-Two independent lines of evidence, one empirical and one from the schematic.
+Dos líneas de evidencia independientes, una empírica y otra del esquema.
 
-### 1. On the bench
+### 1. En la mesa de pruebas
 
-The on-screen diagnostic consistently reported:
+El diagnóstico en pantalla informaba consistentemente:
 
 ```
 host=OK  dev=NONE
 ```
 
-The USB Host stack initialised fine every time (`usb.begin()` succeeded), but no
-device was ever enumerated through the hub. Not intermittently — never.
+La pila USB Host se inicializaba correctamente cada vez (`usb.begin()` tenía éxito), pero ningún dispositivo fue nunca enumerado a través del hub. No intermitentemente — nunca.
 
-### 2. In the schematic
+### 2. En el esquema
 
-`ESP32-S3-Touch-LCD-3.5-Schematic.pdf`, connector **J5**:
+`ESP32-S3-Touch-LCD-3.5-Schematic.pdf`, conector **J5**:
 
-- **CC1 and CC2 each carry a fixed 5.1 kΩ pull-down** (R24, R26).
-- **There is no VBUS source or switch IC anywhere in the design.** VBUS from the
-  connector only feeds the AXP2101 PMIC as a charging input.
+- **CC1 y CC2 cada uno lleva una resistencia de 5.1 kΩ de pull-down** (R24, R26).
+- **No hay ninguna fuente de VBUS o circuito integrado de conmutación en el diseño.** La VBUS del conector solo alimenta la AXP2101 PMIC como entrada de carga.
 
-In USB-C, a 5.1 kΩ pull-down (Rd) on CC is the electrical declaration *"I am a
-device"* — an Upstream Facing Port. A host (Downstream Facing Port) must instead
-present a pull-up (Rp) and be able to source VBUS. This board can do neither.
+En USB-C, una resistencia de 5.1 kΩ de pull-down (Rd) en CC es la declaración eléctrica *"Soy un dispositivo"* — un Puerto que enfrenta hacia arriba. Un host (Puerto que enfrenta hacia abajo) debe presentar una resistencia de pull-up (Rp) y poder suministrar VBUS. Esta placa no puede hacer ninguna de las dos cosas.
 
-Connect two ports that both declare themselves devices and CC negotiation never
-completes, so nothing is ever enumerated. That is exactly the observed
-`dev=NONE`. It is a fixed property of the hardware, and no amount of firmware
-changes the resistors.
+Conectar dos puertos que ambos declaren ser dispositivos y la negociación CC nunca completa, por lo que nunca se enumera nada. Ese es exactamente el `dev=NONE` observado. Es una propiedad fija del hardware, y ninguna cantidad de cambios de firmware altera las resistencias.
 
-## What a real fix would take
+## Lo que tomaría una solución real
 
-Both options are out of scope for a firmware repository, and neither is
-recommended over simply using a module with pins:
+Ambas opciones están fuera de alcance para un repositorio de firmware, y ninguna es recomendada sobre simplemente usar un módulo con pines:
 
-1. **PCB rework** — remove R24/R26, add Rp pull-ups and a VBUS source/switch.
-2. **A separate USB Host Shield** (MAX3421E), which talks to the ESP32 over
-   ordinary SPI and sidesteps the native port entirely. Note this still would not
-   have finished the job: the module's CH340 bridge has no ready-made driver in
-   `USB_Host_Shield_2.0`, so a custom driver class would also be needed.
+1. **Reparación del PCB** — eliminar R24/R26, añadir resistencias de pull-up Rp y una fuente de VBUS/conmutador.
+2. **Una placa de USB Host externa** (MAX3421E), que se comunica con el ESP32 a través de SPI normal y evita por completo el puerto nativo. Nota: esto aún no habría terminado el trabajo: el puente CH340 del módulo no tiene un driver listo en `USB_Host_Shield_2.0`, por lo que también se necesitaría una clase de driver personalizada.
 
-## What to do instead
+## Lo que hacer en su lugar
 
-Use a PN532 module with an accessible pin header — they cost the same — and pick
-the matching build env:
+Usar un módulo PN532 con un header de pines accesible — cuestan lo mismo — y elegir el entorno de construcción correspondiente:
 
-| Wiring | env | Readers |
-|--------|-----|---------|
-| HSU / UART | `esp32s3_hsu_b` | 2 (reference, bench-verified) |
+| Conexión | entorno | Leéderes |
+|----------|---------|----------|
+| HSU / UART | `esp32s3_hsu_b` | 2 (referencia, verificado en la mesa de pruebas) |
 | SPI | `esp32s3` | 2 |
-| I2C on `Wire1` | `esp32s3_i2c` | 1 (fixed 0x24 address) |
+| I2C en `Wire1` | `esp32s3_i2c` | 1 (dirección fija 0x24) |
 
-See [HARDWARE.md](HARDWARE.md) for the pin-by-pin wiring of each.
+Ver [HARDWARE.md](HARDWARE_ES.md) para la conexión pin a pin de cada uno.
 
-## Footnote: the bug this detour hid
+## Pie de página: el error que este desvío ocultó
 
-While the USB-host path was being chased, the HSU path was *also* reporting no
-readers — which made the whole transport story look worse than it was. The real
-cause there was unrelated and mundane: `setupRFID()` called
-`SPI.begin(47, 48, 41)` unconditionally, claiming the exact GPIOs the HSU build
-rebinds to `Serial1`/`Serial2`. SPI got the pins first, the later
-`Serial.begin()` calls never took over the pin bindings, and nothing was ever
-transmitted. That call is now guarded to the SPI transport only, and HSU works
-with both readers.
+Mientras se perseguía la ruta USB-host, la ruta HSU también reportaba no leéderes — lo que hacía que la historia de transporte pareciera peor de lo que era. La causa real allí era ajena y mundana: `setupRFID()` llamaba a `SPI.begin(47, 48, 41)` incondicionalmente, afirmando los exactos GPIOs que el entorno HSU rebindía a `Serial1`/`Serial2`. SPI obtuvo los pines primero, y las llamadas posteriores a `Serial.begin()` nunca tomaron el control de los enlaces de pines, y nada se transmitió. Esa llamada ahora está protegida solo para el transporte SPI, y HSU funciona con ambos leéderes.
 
-Two separate faults presenting as the same symptom is worth remembering: it is
-why "no readers detected" should always start with *"which env was this actually
-built for?"*
+Dos fallos separados que presentan el mismo síntoma vale la pena recordarlo: es por eso que "ningún leéder detectado" siempre debe comenzar con *"¿qué entorno se usó realmente para construir esto?"*

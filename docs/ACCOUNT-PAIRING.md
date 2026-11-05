@@ -1,40 +1,24 @@
-# Linking a TigerTag account to the scale
+# Vincular una cuenta TigerTag a la báscula
 
-How a TigerScale gets signed in when its owner has no password to type.
+Cómo un TigerScale se autentifica cuando su propietario no tiene contraseña para introducir.
 
-## The problem this solves
+## El problema que resuelve
 
-The firmware signs in with `accounts:signInWithPassword` — an email and a
-password typed on the touchscreen. Anyone who created their TigerTag account
-**with Google has no password**, so there is nothing to type. Today those owners
-have to leave the scale and use a web interface instead, and the scale's own
-sign-in screen is a dead end for them.
+El firmware se autentifica mediante `accounts:signInWithPassword` — un correo electrónico y una contraseña introducidos en la pantalla táctil. Cualquiera que haya creado su cuenta TigerTag **con Google no tiene contraseña**, por lo que no hay nada que introducir. Hoy en día, esos propietarios deben dejar la báscula y usar una interfaz web en su lugar, y la propia pantalla de inicio de sesión de la báscula es un callejón sin salida para ellos.
 
-It also explains a failure seen in the field: when a token refresh fails, the
-firmware falls back to a full sign-in and Google-account owners get
-`MISSING_PASSWORD` back, because the password it is falling back to never
-existed.
+También explica un error observado en campo: cuando un refresco de token falla, el firmware cae de vuelta a una autenticación completa y los propietarios de cuentas de Google reciben `MISSING_PASSWORD`, porque la contraseña a la que cae nunca existió.
 
-## Why not the standard OAuth device flow
+## ¿Por qué no el flujo estándar OAuth device
 
-[RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628) exists for exactly this
-shape of device, and Google implements it. It was rejected after reading the
-specification rather than on taste:
+[RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628) existe exactamente para este tipo de dispositivo, y Google lo implementa. Fue rechazado después de leer la especificación en lugar de por gusto:
 
-- Google's device-code response carries **no `verification_url_complete`**. It
-  returns `https://www.google.com/device` and an eight-character code the owner
-  must retype. A QR can only carry the bare URL, so the best possible experience
-  is "scan, then copy a code across from a screen 40 cm away".
-- Polling **requires a `client_secret`**, which this repository must not carry
-  (see the Secrets rule in `CLAUDE.md`). It could be provisioned at runtime, but
-  that is machinery in service of a flow that is worse anyway.
-- It authenticates against Google only. Apple, or any provider added later, would
-  each need their own path.
+- La respuesta device-code de Google **no lleva `verification_url_complete`**. Devuelve `https://www.google.com/device` y un código de ocho caracteres que el propietario debe volver a introducir. Un código QR solo puede llevar la URL básica, por lo que la mejor experiencia posible es "escanear, luego copiar un código desde una pantalla a 40 cm de distancia".
+- El **polling requiere un `client_secret`**, que este repositorio no debe llevar (ver la regla de Secretos en `CLAUDE.md`). Podría provisionarse en tiempo de ejecución, pero eso es maquinaria en servicio de un flujo que es peor de todos modos.
+- Se autentifica solo contra Google. Apple, o cualquier proveedor agregado más tarde, necesitarían cada uno su propio camino.
 
-Pairing through TigerTag's own cloud has none of those properties, because we own
-both ends: **the URL in the QR already carries the code.** Scan, approve, done.
+El emparejamiento a través de la nube de TigerTag no tiene ninguno de esos atributos, porque controlamos ambos extremos: **la URL en el código QR ya lleva el código.** Escanear, aprobar, terminado.
 
-## The flow
+## El flujo
 
 ```
   scale                        tigersystem.io                     owner's phone
@@ -54,15 +38,13 @@ both ends: **the URL in the QR already carries the code.** Scan, approve, done.
     |<- idToken + refreshToken                                          |
 ```
 
-The owner is standing at the scale, so they scan a QR that is physically in front
-of them, and approve on a phone where they are usually already signed in.
+El propietario está frente a la báscula, por lo que escanea un QR que está físicamente frente a él, y aprueba en un teléfono donde normalmente ya está autenticado.
 
-## The two endpoints
+## Los dos puntos de acceso
 
 ### `POST /api/device/pair/start`
 
-Unauthenticated — the device has no identity yet. That is what the rate limit and
-the short expiry are for.
+No autenticado — el dispositivo no tiene identidad aún. Eso es lo que el límite de tasa y la expiración corta son para.
 
 ```json
 { "device": "tigerscale-A1B2", "model": "TigerScale V3", "fw": "3.1.3" }
@@ -78,10 +60,7 @@ the short expiry are for.
 }
 ```
 
-**`code` and `poll_token` are different secrets on purpose.** The code is short
-because a human may have to read it aloud or type it; the poll token is long
-because whoever holds it receives the credential. If one value did both jobs,
-anyone who glimpsed the screen could poll for the token from across the room.
+**`code` y `poll_token` son secretos diferentes con intención.** El código es corto porque un humano puede tener que leerlo en voz alta o introducirlo; el token de poll es largo porque quien lo posea recibe la credencial. Si un valor hiciera ambas tareas, cualquiera que mirara la pantalla podría pollar el token desde la otra habitación.
 
 ### `POST /api/device/pair/poll`
 
@@ -89,45 +68,30 @@ anyone who glimpsed the screen could poll for the token from across the room.
 { "poll_token": "<the value from start>" }
 ```
 
-| Response | Meaning |
+| Respuesta | Significado |
 |----------|---------|
-| `{"status":"pending"}` | Nobody has approved yet. Poll again after `interval`. |
-| `{"status":"approved","custom_token":"<jwt>","email":"…"}` | Sign in with it. Single use — the record is consumed. |
-| `{"status":"denied"}` | The owner refused. Stop, and say so on screen. |
-| `{"status":"expired"}` | Older than `expires_in`. Start again with a fresh code. |
+| `{"status":"pending"}` | Nadie ha aprobado aún. Vuelva a pollar después de `interval`. |
+| `{"status":"approved","custom_token":"<jwt>","email":"…"}` | Inicie sesión con él. Uso único — el registro se consume. |
+| `{"status":"denied"}` | El propietario rechazó. Deténgase y diga así en la pantalla. |
+| `{"status":"expired"}` | Más antiguo que `expires_in`. Empiece de nuevo con un código fresco. |
 
-The device then calls Identity Toolkit as it does today, but with
-`accounts:signInWithCustomToken` instead of `…WithPassword`, and stores the
-returned refresh token in NVS exactly as now.
+El dispositivo luego llama a Identity Toolkit como lo hace hoy, pero con `accounts:signInWithCustomToken` en lugar de `…WithPassword`, y almacena el token de refresco devuelto en NVS exactamente como ahora.
 
-## What the approval page must show
+## Lo que debe mostrar la página de aprobación
 
-The page reached by the QR must name **which** scale is asking — its device name
-and the last four of its MAC — and the account it would be linked to. Device
-pairing is otherwise vulnerable to being handed someone else's code: the risk is
-small here because the owner is looking at the physical screen the QR came from,
-but a page that says only "approve?" trains people to approve anything.
+La página alcanzada por el QR debe nombrar **cuál** báscula está pidiendo — su nombre de dispositivo y los últimos cuatro de su MAC — y la cuenta a la que se vincularía. El emparejamiento de dispositivos es de otro modo vulnerable a ser entregado a alguien más: el riesgo es pequeño aquí porque el propietario está mirando la pantalla física de donde vino el QR, pero una página que diga solo "aprobado?" entrena a la gente para aprobar cualquier cosa.
 
-## Rules for the cloud side
+## Reglas para el lado de la nube
 
-- Rate-limit `start` per IP and `poll` per token; reject a poll faster than
-  `interval` with the same back-off the OAuth device flow uses.
-- Codes are single-use and expire in ten minutes.
-- Store the pending record keyed by a hash of `poll_token`, not the token itself.
-- Mint the custom token with `firebase-admin`, which `TigerTag_Hub` already
-  depends on (`lib/firebase/admin.ts`).
+- Límite de tasa `start` por IP y `poll` por token; rechace un poll más rápido que `interval` con el mismo back-off que usa el flujo OAuth device.
+- Los códigos son de uso único y caducan en diez minutos.
+- Almacene el registro pendiente claveado por un hash de `poll_token`, no el token mismo.
+- Genere el token personalizado con `firebase-admin`, que `TigerTag_Hub` ya depende (`lib/firebase/admin.ts`).
 
-## What changes in the firmware
+## Lo que cambia en el firmware
 
-- `LV_USE_QRCODE` is `0` in `include/lv_conf.h`. LVGL v8 already ships the widget;
-  it only needs turning on.
-- A screen under Settings → Cloud that runs the flow and draws the QR, with the
-  code in text beneath it for anyone whose phone will not scan.
-- `signInWithCustomToken` alongside the existing password path. The password path
-  stays: plenty of owners do have one.
-- `isFirebaseConfigured()` **already** accepts a stored refresh token on its own —
-  its comment anticipates "Google Auth or any provider via the OAuth bridge". A
-  paired scale will look configured with no change needed, which is one less thing
-  to get wrong.
-- When a refresh fails and there is no password, say "sign in again" and offer the
-  QR — do not attempt a password sign-in that can only return `MISSING_PASSWORD`.
+- `LV_USE_QRCODE` es `0` en `include/lv_conf.h`. LVGL v8 ya incluye el widget; solo necesita activarse.
+- Una pantalla bajo Configuración → Nube que ejecuta el flujo y dibuja el QR, con el código en texto debajo para cualquiera cuyo teléfono no escaneará.
+- `signInWithCustomToken` junto con la ruta de contraseña existente. La ruta de contraseña permanece: hay muchos propietarios que sí tienen una.
+- `isFirebaseConfigured()` **ya acepta un token de refresco almacenado por su cuenta — su comentario anticipa "Autenticación de Google o cualquier proveedor mediante el puente OAuth".** Una báscula emparejada se verá configurada sin cambios necesarios, lo cual es un menos error para cometer.
+- Cuando un refresco falla y no hay contraseña, diga "inicie sesión de nuevo" y ofrezca el QR — no intente una autenticación con contraseña que solo puede devolver `MISSING_PASSWORD`.

@@ -1,13 +1,9 @@
-# Reviews
+# Revisión
 
-One file per review, `YYYY-MM-DD-<scope>.md`, kept permanently. The brief a
-reviewer works from is [`../REVIEW-BRIEF.md`](../REVIEW-BRIEF.md).
+Un archivo por revisión, `YYYY-MM-DD-<scope>.md`, conservado permanentemente. La guía que utiliza un revisor es [`../REVIEW-BRIEF.md`](../REVIEW-BRIEF_ES.md).
 
-They are kept rather than read once and deleted because an unannotated report
-reads to the next reviewer as though nothing was ever done. After working one,
-mark every finding **fixed**, **deferred** (with the reason) or **rejected**
-(wrong call), in the report itself.
+Se conservan en lugar de leerse una vez y eliminarse porque un informe no anotado se lee para el siguiente revisor como si nada hubiera sido hecho. Después de trabajar en uno, marque cada hallazgo **resuelto**, **pospuesto** (con la razón) o **rechazado** (llamada incorrecta), en el informe mismo.
 
-| Date | Scope | Findings | Worked through |
-|------|-------|----------|----------------|
-| _(none yet)_ | | | |
+| Fecha | Ámbito | Hallazgos | Trabajado |
+|-------|--------|-----------|-----------|
+| _(ninguno aún)_ |        |           |           |

@@ -1,15 +1,12 @@
-# Troubleshooting
+# Solución de problemas
 
-Ordered roughly by how often each thing is the actual cause.
+Ordenado aproximadamente por la frecuencia con la que cada cosa es la causa real.
 
-## "No RFID readers detected"
+## "No se detectan lectores RFID"
 
-**Check the build env first.** This is the single most common cause, and it costs
-hours every time it is not checked first.
+**Comprueba primero el entorno de compilación.** Esta es la causa más común, y cuesta horas cada vez que no se comprueba primero.
 
-The NFC transport is chosen at compile time. Firmware built for the wrong
-transport detects nothing, reports no error, and looks exactly like a wiring
-fault or a dead module.
+El transporte NFC se elige en tiempo de compilación. El firmware compilado para el transporte incorrecto detecta nada, reporta ningún error y se ve exactamente como una falla de conexión o un módulo muerto.
 
 ```bash
 pio run -e esp32s3_hsu_b # HSU / UART wiring, -3.5B board (2 readers, reference build)
@@ -17,43 +14,35 @@ pio run -e esp32s3       # SPI wiring         (2 readers)
 pio run -e esp32s3_i2c   # I2C on Wire1       (1 reader)
 ```
 
-Match the env to how your modules are physically wired
-([HARDWARE.md](HARDWARE.md#nfc-wiring--pick-one-then-build-the-matching-env)),
-and check the module's own mode switch position while you are there —
-HSU = OFF/OFF, I²C = ON/OFF, SPI = OFF/ON on the Elechouse V3 silkscreen.
+Asegúrate de que el entorno coincida con cómo están físicamente conectados los módulos
+([HARDWARE.md](HARDWARE_ES.md#nfc-wiring--pick-one-then-build-the-matching-env)),
+y verifica la posición del interruptor de modo del módulo mientras estás allí —
+HSU = OFF/OFF, I²C = ON/OFF, SPI = OFF/ON en la silkscreen Elechouse V3.
 
-If the env is right:
+Si el entorno es correcto:
 
-1. **Try the RF power level.** Settings → Hardware has a `−`/`+` stepper; the
-   change applies on the very next scan. Default is 3. This is genuinely often
-   the answer, because the two antennas face each other ~75 mm apart and
-   cross-talk.
-2. **Watch the actual bytes.** Build a debug env and open the serial monitor:
+1. **Intenta el nivel de potencia RF.** Configuración → Hardware tiene un `−`/`+` de pasos; el cambio se aplica en la siguiente escaneo inmediato. El valor predeterminado es 3. Esto es genuinamente frecuente la respuesta, porque las dos antenas se miran entre sí ~75 mm y hay interferencia cruzada.
+2. **Observa los bytes reales.** Construye un entorno de depuración y abre el monitor serial:
    ```bash
    bash scripts/flash.sh --env esp32s3_hsu_debug --monitor
    ```
-   Every frame sent to and received from the reader is printed. This separates
-   "my wiring is wrong" (nothing at all) from "my tag is unreadable" (frames go
-   out, nothing comes back).
-3. **Check GND.** The modules need a common ground with the ESP32. This is the
-   most-forgotten wire.
-4. **Try one reader at a time.** `RFID_READER_TEST_MODE` in §1: `1` = right only,
-   `2` = left only.
+   Cada frame enviado a y recibido del lector se imprime. Esto separa
+   "mi conexión es incorrecta" (nada en absoluto) de "mi etiqueta no es legible" (frames salen, nada regresa).
+3. **Verifica GND.** Los módulos necesitan un suelo común con el ESP32. Esta es la conexión más olvidada.
+4. **Intenta un lector a la vez.** `RFID_READER_TEST_MODE` en §1: `1` = solo derecho,
+   `2` = solo izquierdo.
 
-If you are considering a USB-connected NFC reader: it cannot work on this board.
-[USB_HOST_POSTMORTEM.md](USB_HOST_POSTMORTEM.md) explains why, in enough detail
-that you will not need to test it yourself.
+Si estás considerando un lector NFC conectado por USB: no puede funcionar en esta placa.
+[USB_HOST_POSTMORTEM.md](USB_HOST_POSTMORTEM_ES.md) explica por qué, con suficiente detalle
+que no necesitarás probarlo tú mismo.
 
-## The log says `[HX711] not ready` — is my load cell dead?
+## El log dice `[HX711] no listo` — ¿mi célula de carga está muerta?
 
-Probably not. This message does **not** mean the HX711 is unwired or broken.
+Probablemente no. Este mensaje **no** significa que la HX711 esté desconectada o rota.
 
-It is printed whenever `scale.is_ready()` returns false, rate-limited to once
-every 2 seconds. On the reference unit it appears continuously while the scale is
-nonetheless weighing correctly — the display shows a real weight and the readings
-reach the cloud.
+Se imprime cada vez que `scale.is_ready()` devuelve falso, limitado a una vez cada 2 segundos. En la unidad de referencia aparece continuamente mientras la báscula sigue midiendo correctamente — la pantalla muestra un peso real y las lecturas llegan a la nube.
 
-Check whether you are actually getting readings before investigating hardware:
+Verifica si estás obteniendo lecturas antes de investigar hardware:
 
 ```bash
 python3 scripts/watch_logs.py <device-ip> --all | grep ALIVE
@@ -63,119 +52,94 @@ python3 scripts/watch_logs.py <device-ip> --all | grep ALIVE
 [ALIVE] up=29777s heap=52412 min=2892 wifi=1 firebase=1 wf=0 hx=0 weight=0.74
 ```
 
-If `weight=` moves when you press on the platform, the load cell is fine.
+Si `weight=` cambia cuando presionas en la plataforma, la célula de carga está bien.
 
-What is going on: after **600 ms** of continuously missed samples, `readWeight()`
-forces the weight to 0. Blocking network work in `loop()` — Firebase HTTPS calls
-in particular — can stall long enough to trip that, on hardware that is working
-perfectly. Note `min=2892` in the line above: minimum free heap down to 2.9 KB,
-which is the same memory pressure discussed in
-[FIRMWARE.md](FIRMWARE.md#memory).
+¿Qué está pasando: después de **600 ms** de muestras perdidas continuas, `readWeight()` fuerza el peso a 0. Bloquear trabajo de red en `loop()` — especialmente las llamadas HTTPS de Firebase — puede detenerse lo suficiente para disparar eso, en hardware que funciona perfectamente. Nota `min=2892` en la línea anterior: la memoria libre mínima baja a 2.9 KB, que es la misma presión de memoria discutida en
+[FIRMWARE.md](FIRMWARE_ES.md#memory).
 
-So: a scale that reads correctly but logs this is showing a robustness gap in
-`readWeight()`, not a wiring fault. A scale that logs this **and** never shows a
-weight is a wiring problem — read the next section.
+Así que: una báscula que lee correctamente pero registra esto muestra una brecha de robustez en `readWeight()`, no una falla de conexión. Una báscula que registra esto **y** nunca muestra un peso es un problema de conexión — lee la sección siguiente.
 
-## The scale reads 0 g, or negative, no matter what
+## La báscula lee 0 g, o negativo, sin importar qué
 
-**Check the sign of the raw reading before touching anything in software.** Add a
-temporary `Serial.printf` right after `scale.get_units()` in `readWeight()`.
+**Comprueba el signo de la lectura bruta antes de tocar algo en software.** Añade un `Serial.printf` temporal justo después de `scale.get_units()` en `readWeight()`.
 
-A swapped load-cell wire produces exactly this symptom, because a downstream
-`if (weight < 0) weight = 0` clamp makes a hardware polarity fault
-indistinguishable from a filter or auto-tare bug. This has happened here before,
-after a long hunt through the software.
+Una conexión invertida de cable de célula de carga produce exactamente este síntoma, porque un `if (weight < 0) weight = 0` clamping hace que una falla de polaridad hardware sea indistinguible de un error de filtro o auto-tara. Esto ha ocurrido aquí antes, después de una larga búsqueda en el software.
 
-If the sign is right, re-run the calibration wizard (Settings → Calibration) with
-a known reference weight.
+Si el signo es correcto, vuelve a ejecutar el asistente de calibración (Configuración → Calibración) con un peso de referencia conocido.
 
-## Weight drifts, or the reading is jumpy
+## El peso se desvía, o la lectura es saltarina
 
-- Re-calibrate. The calibration factor is per-unit.
-- Check that the load cell is mounted with no mechanical binding — a wire or
-  enclosure edge touching the platform will do this.
-- Filtering constants live in §6; the intended behaviour is a fast EMA during a
-  change and a fine EMA once settled.
+- Re-calibra. El factor de calibración es por unidad.
+- Asegúrate de que la célula de carga esté montada sin ninguna restricción mecánica — un cable o borde de carcasa tocando la plataforma hará esto.
+- Las constantes de filtrado viven en §6; el comportamiento intencionado es un EMA rápido durante un cambio y un EMA fino una vez que se estabilice.
 
-## WiFi credentials keep disappearing after a reflash
+## Las credenciales WiFi se pierden después de un reflash
 
-You are flashing `firmware.factory.bin` at `0x0000`. That is a merged image
-spanning 0x0000 upward continuously, so it overwrites NVS (0x9000–0xE000), which
-is where the saved WiFi and Firebase session live.
+Estás flashando `firmware.factory.bin` en `0x0000`. Esa es una imagen fusionada que abarca continuamente desde `0x0000` hacia arriba, por lo que sobrescribe NVS (0x9000–0xE000), donde viven las credenciales WiFi y la sesión Firebase guardadas.
 
-Use `bash scripts/flash.sh` or `pio run -t upload`, both of which write each image
-at its own offset and leave NVS alone.
+Usa `bash scripts/flash.sh` o `pio run -t upload`, ambos de los cuales escriben cada imagen en su propio desplazamiento y dejan NVS intacto.
 
-## The device boots into a crash loop
+## El dispositivo se inicia en un bucle de crash
 
-If you flashed manually with your own esptool invocation, check the flash mode:
-**DIO is required**. QIO gives a boot crash loop in `ets_loader.c` on this board.
-`scripts/flash.sh` and the PlatformIO board config already set this correctly.
+Si flashes manualmente con tu propia invocación de esptool, verifica el modo de flash:
+**DIO es requerido**. QIO da un bucle de inicio de crash en `ets_loader.c` en esta placa.
+`scripts/flash.sh` y la configuración del board de PlatformIO ya establecen esto correctamente.
 
-Otherwise, connect the serial monitor and read the panic:
+De lo contrario, conecta el monitor serial y lee el panic:
 
 ```bash
 pio device monitor
 ```
 
-The `esp32_exception_decoder` filter is enabled in `platformio.ini`, so
-backtraces come out with function names attached.
+El filtro `esp32_exception_decoder` está habilitado en `platformio.ini`, por lo que
+los backtraces salen con nombres de funciones adjuntos.
 
-## The flasher shows no COM port at all
+## El flasher muestra ninguna puerto COM
 
-The board never appears in the list, so there is nothing to select. That is a
-missing driver or a charge-only USB cable, not a fault in the scale — per-OS
-instructions are in [SERIAL-PORT.md](SERIAL-PORT.md).
+La placa nunca aparece en la lista, por lo que no hay nada para seleccionar. Eso es una falta de controlador o un cable USB de carga solo, no una falla en la báscula — las instrucciones por sistema operativo están en [SERIAL-PORT.md](SERIAL-PORT_ES.md).
 
-## Nothing on the serial console
+## Nada en la consola serial
 
-`ARDUINO_USB_CDC_ON_BOOT=1` must be set — it is, in every env — otherwise
-`Serial.println()` is invisible over the USB-C port and only `log_e()` gets
-through. If you added a build env, make sure you inherited
-`${common.build_flags}`.
+`ARDUINO_USB_CDC_ON_BOOT=1` debe estar establecido — está, en cada entorno — de lo contrario
+`Serial.println()` es invisible por el puerto USB-C y solo `log_e()` pasa.
+Si añadiste un entorno de compilación, asegúrate de que heredaste `${common.build_flags}`.
 
-The firmware also keeps the last ~80 log lines in RAM and serves them over HTTP,
-which is the only way to read them once the cable is unplugged:
+El firmware también mantiene las últimas ~80 líneas de log en RAM y las sirve sobre HTTP,
+que es la única forma de leerlas una vez que se desconecta el cable:
 
 ```bash
 python3 scripts/watch_logs.py 192.168.1.42
 python3 scripts/watch_logs.py tigerscale-XXXX.local --all
 ```
 
-## The touchscreen does not respond
+## La pantalla táctil no responde
 
-Touch is on `Wire1` (SDA=GPIO8, SCL=GPIO7) at address 0x3B. Check the boot log for
-the I²C scan.
+El tacto está en `Wire1` (SDA=GPIO8, SCL=GPIO7) en la dirección 0x3B. Verifica el log de inicio para
+el escaneo I²C.
 
-You will also see `perimanSetPinBus(): Invalid pin: 22` and a scan finding zero
-devices on the *other* bus at every boot. That is expected and harmless — `Wire`
-(GPIO21/22) is broken by design on this board, GPIO22 does not exist on the
-ESP32-S3. It is not related to your touch problem.
+También verás `perimanSetPinBus(): Pin inválido: 22` y un escaneo que encuentra cero
+dispositivos en el *otro* bus en cada inicio. Eso es esperado y sin daño — `Wire`
+(GPIO21/22) está roto por diseño en esta placa, GPIO22 no existe en el
+ESP32-S3. No está relacionado con tu problema de tacto.
 
-## The web UI is blank or 404s
+## La interfaz web está en blanco o da 404
 
-The web UI lives in a separate LittleFS partition and is not written by a normal
-firmware flash:
+La interfaz web vive en una partición separada de LittleFS y no se escribe por un flash normal
+de firmware:
 
 ```bash
 bash scripts/flash.sh --fs
 ```
 
-## Cloud sync is not happening
+## La sincronización con la nube no está ocurriendo
 
-1. Confirm sign-in: Settings → Cloud.
-2. Confirm the tag is being read — the scale beeps and shows the material.
-3. Weight must be above `MIN_WEIGHT_TO_SEND_G`; an almost-empty platform will not
-   send.
-4. Check `python3 scripts/watch_logs.py <ip>` for the `[META]` and `[FIRESTORE]`
-   lines.
+1. Confirma el inicio de sesión: Configuración → Nube.
+2. Confirma que la etiqueta está siendo leída — la báscula suena y muestra el material.
+3. El peso debe ser superior a `MIN_WEIGHT_TO_SEND_G`; una plataforma casi vacía no enviará.
+4. Revisa `python3 scripts/watch_logs.py <ip>` para las líneas `[META]` y `[FIRESTORE]`.
 
-Note that `readInventoryContainerWeight()` returns 0 on any failure without
-retrying, so a spool whose container weight is unknown syncs with net = 0 rather
-than failing loudly.
+Nota que `readInventoryContainerWeight()` devuelve 0 en cualquier fallo sin reintentar, por lo que un rollo cuyo peso del contenedor es desconocido sincroniza con net = 0 en lugar de fallar fuerte.
 
-## Nothing here helped
+## Nada aquí ayudó
 
-Open an issue with: the build env you used, the transport wiring, the serial log
-around the failure, and `TIGERSCALE_FW_VERSION`. The env and the wiring are the
-two things that make a report actionable.
+Abre un problema con: el entorno de compilación que usaste, la conexión de transporte, el log serial alrededor del fallo, y `TIGERSCALE_FW_VERSION`. El entorno y la conexión son las dos cosas que hacen que un reporte sea accionable.

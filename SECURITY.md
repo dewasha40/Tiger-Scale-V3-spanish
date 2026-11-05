@@ -1,63 +1,51 @@
-# Security policy
+# Política de seguridad
 
-## Reporting a vulnerability
+## Denuncia de una vulnerabilidad
 
-Please **do not open a public issue** for a security problem.
+Por favor, **no abra un problema público** para un problema de seguridad.
 
-Report it through
+Denúncialo a través de
 [GitHub's private vulnerability reporting](https://github.com/TigerTag-Project/Tiger-Scale-V3/security/advisories/new),
-or by email to **benoit@atome3d.com**.
+o por correo electrónico a **benoit@atome3d.com**.
 
-Useful details: what you found, how to reproduce it, the firmware version, and
-what an attacker could actually do with it. You'll get an acknowledgement, and
-credit in the release notes if you'd like it.
+Detalles útiles: lo que encontraste, cómo reproducirlo, la versión del firmware, y
+lo que un atacante podría hacer realmente con ello. Te darás cuenta de que se ha recibido la denuncia, y
+crédito en las notas de lanzamiento si lo deseas.
 
-## Supported versions
+## Versiones admitidas
 
-The latest release. This is a hobbyist hardware project — there are no long-term
-support branches.
+La última versión liberada. Este es un proyecto de hardware amatorista — no hay ramas de soporte a largo plazo.
 
-## Scope
+## Alcance
 
-**In scope** — this firmware, its local HTTP API and web UI, its OTA update path,
-and how it stores credentials on the device.
+**En el alcance** — este firmware, su API HTTP local y la interfaz web, su ruta de actualización OTA, y
+cómo almacena credenciales en el dispositivo.
 
-**Out of scope** — the TigerTag cloud backend, the mobile and desktop
-applications, and the NFC tags themselves. Each lives in its own repository.
+**Fuera del alcance** — el backend de TigerTag en la nube, las aplicaciones móviles y de escritorio,
+y las etiquetas NFC en sí. Cada una vive en su propio repositorio.
 
-## Known and accepted weaknesses
+## Debilidades conocidas y aceptadas
 
-These are design decisions, not undiscovered bugs. Reporting them is fine, but
-you won't be telling us anything new.
+Estas son decisiones de diseño, no errores no descubiertos. Denunciarlos es aceptable, pero
+no te estarás informando de algo nuevo.
 
-- **The local HTTP API is unauthenticated.** Anyone on the same network can read
-  the scale's state, read the log ring (`GET /api/logs`), trigger a tare, and
-  clear the stored WiFi or Firebase session. This is a deliberate simplification
-  for a device on a home LAN. If you don't fully trust your network, put the
-  device on a guest VLAN.
-- **A Firebase refresh token is stored in the device's NVS flash.** It is what
-  lets the scale keep syncing without you signing in again. Treat a provisioned
-  device as holding a credential: sign out (Settings → Cloud, or
-  `POST /api/firebase/logout`) before passing one on. A plain reflash does *not*
-  clear it — NVS is preserved on purpose so updates don't cost you your setup.
-- **OTA verifies a SHA-256 but uses `setInsecure()` for TLS.** Certificate
-  validation is skipped; integrity rests on the hash. That means the hash's source
-  is what matters — a network attacker who can serve both the manifest and the
-  binary could serve a matching pair. Pinning a CA would be a genuine improvement
-  and a welcome pull request.
-- **`TIGERTAG_FIREBASE_WEB_API_KEY` is hardcoded in the source, deliberately.** A
-  Firebase Web API key is a public project identifier that every Firebase client
-  application ships — the same value is served publicly by Firebase Hosting at
-  `/__/firebase/init.json`. It identifies the project and authorises nothing on
-  its own; access control is enforced by Security Rules against the signed-in
-  user. This is not a leaked secret.
+- **La API HTTP local no está autenticada.** Cualquiera en la misma red puede leer
+  el estado de la báscula, leer el anillo de registros (`GET /api/logs`), desencadenar un tare, y
+  limpiar la sesión WiFi o Firebase almacenada. Esto es una simplificación deliberada para un dispositivo en una red doméstica. Si no confías completamente en tu red, coloca el
+  dispositivo en una VLAN de invitados.
+- **Un token de refresco de Firebase se almacena en la memoria flash NVS del dispositivo.** Es lo que
+  permite que la báscula siga sincronizándose sin que debas iniciar sesión nuevamente. Trata a un dispositivo provisionado como algo que contiene una credencial: desloguea (Configuración → Nube, o
+  `POST /api/firebase/logout`) antes de pasar uno a otra persona. Un refrescado simple no
+  lo borra — la memoria flash NVS se preserva deliberadamente para que las actualizaciones no te hagan perder la configuración.
+- **OTA verifica un SHA-256 pero usa `setInsecure()` para TLS.** La validación del certificado se salta; la integridad descansa en el hash. Esto significa que la fuente del hash es lo que importa — un atacante en la red que pueda servir tanto el manifiesto como el binario podría servir un par coincidente. Anclarse a una CA sería una mejora genuina y un pull request bienvenido.
+- **`TIGERTAG_FIREBASE_WEB_API_KEY` está codificado en la fuente, deliberadamente.** Una clave de API web de Firebase es un identificador público del proyecto que cada aplicación cliente de Firebase incluye — el mismo valor se sirve públicamente por Firebase Hosting en `/__/firebase/init.json`. Identifica el proyecto y autoriza nada por sí sola; el control de acceso se enfoque mediante Reglas de Seguridad contra el usuario conectado. Esto no es una secreto filtrado.
 
-What we'd genuinely like to hear about: anything that lets someone off your
-network reach the device, read another user's data, or get arbitrary firmware
-onto a unit.
+Lo que verdaderamente nos gustaría escuchar: cualquier cosa que permita a alguien fuera de tu
+red alcanzar el dispositivo, leer los datos de otro usuario, o instalar firmware arbitrario
+en una unidad.
 
-## For contributors
+## Para colaboradores
 
-Never commit WiFi credentials, tokens, or personal network addresses. If you need
-a device address in a script, take it as an argument — `scripts/watch_logs.py`
-does exactly that, after an earlier version had a developer's LAN IP baked in.
+Nunca comites credenciales de WiFi, tokens o direcciones de red personales. Si necesitas
+una dirección del dispositivo en un script, toma como argumento — `scripts/watch_logs.py`
+hace exactamente eso, después de que una versión anterior tuviera la IP LAN del desarrollador incrustada.
